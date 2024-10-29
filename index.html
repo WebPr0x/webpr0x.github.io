@@ -1,1 +1,46 @@
-<iframe src="https://webpr0x.my.canva.site/"></iframe>
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>blueCutter</title>
+
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+		<script
+			type="module"
+			src="https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.esm.js"
+		></script>
+		<script
+			nomodule
+			src="https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.js"
+		></script>
+
+		<link rel="stylesheet" href="/style/master.css" />
+		<link rel="stylesheet" href="/style/index.css" />
+	</head>
+
+	<body>
+		<script type="module" src="/script/sdk/proxyHref.js"></script>
+
+		<section>
+			<input
+				id="omnibox"
+				type="text"
+				placeholder="Type a search query or url here"
+				autocomplete="off"
+				autofocus
+			/>
+			<div id="box" hidden></div>
+		</section>
+		<navbar>
+			<a href="options.html"><ion-icon name="cog-outline"></ion-icon></a>
+			<a id="repo" onclick=""><ion-icon name="logo-github"></ion-icon></a>
+		</navbar>
+		<p id="sponsor"></p>
+
+		<script type="module" src="/script/init.js"></script>
+		<script type="module" src="/script/initHome.js"></script>
+
+		<script type="module" src="/script/index.js"></script>
+	</body>
+</html>
