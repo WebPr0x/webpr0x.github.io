@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito&display=swap" rel="stylesheet">
+  <title>e</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 2rem;
+      font-family: Nunito, sans-serif;
+      background-color: #121212;
+      color: #ffffff;
+    }
+
+    nav {
+      background-color: #1e1e1e;
+      padding: 1rem 2rem;
+      display: flex;
+      gap: 2rem;
+    }
+
+    nav a {
+      color: #90caf9;
+      text-decoration: none;
+      font-size: 1rem;
+      transition: color 0.3s ease;
+    }
+
+    nav a:hover {
+      color: #ffffff;
+    }
+
+    .container {
+      max-width: 1000px;
+      margin: 2rem auto 0;
+    }
+
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 2rem;
+    }
+
+    .card {
+      background-color: #1e1e1e;
+      border-radius: 1rem;
+      overflow: hidden;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+      transition: transform 0.3s ease;
+    }
+
+    .card:hover {
+      transform: translateY(-5px);
+    }
+
+    .card img {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    .card-content {
+      padding: 1rem;
+    }
+
+    .card-content h3 {
+      margin: 0 0 0.5rem;
+      font-size: 1.2rem;
+    }
+
+    .card-content p {
+      margin: 0;
+      font-size: 1rem;
+      line-height: 1.4;
+    }
+  </style>
+</head>
+<body>
+  <div id="nav-placeholder"></div>
+  <script>
+    fetch('nav.html')
+      .then(response => response.text())
+      .then(data => {
+        document.getElementById('nav-placeholder').innerHTML = data;
+      });
+    function openHtmlInBlank(url) {
+      const newWindow = window.open('about:blank', '_blank');
+      fetch(url)
+        .then(response => response.text())
+        .then(html => {
+          newWindow.document.open();
+          newWindow.document.write(html);
+          newWindow.document.close();
+        })
+        .catch(() => {
+          newWindow.document.write('<p>Failed to load content.</p>');
+        });
+    }
+  </script>
+
+  <div class="container">
+    <h1>Games Directory</h1>
+    <h3>No downloads required.</h3>
+    <div class="card-grid">
+      <!-- Card 1 -->
+        <div class="card" style="cursor:pointer;" onclick="openHtmlInBlank('test.html')">
+      <div class="card">
+        <img src="https://placehold.co/400x200">
+        <div class="card-content">
+          <h3>EaglerCraft</h3>
+          <p>EaglerCraft is an accurate Minecraft clone you can play in your browser.</p>
+        </div>
+      </div>
+        </a>
+      <!-- Card 2 -->
+      <div class="card">
+        <img src="https://placehold.co/400x200" alt="Placeholder Image 2">
+        <div class="card-content">
+          <h3>Coming Soon</h3>
+          <p>This game is coming in a later update.</p>
+        </div>
+      </div>
+      <div class="card">
+        <img src="https://placehold.co/400x200" alt="Placeholder Image 3">
+        <div class="card-content">
+          <h3>Coming Soon</h3>
+          <p>This game is coming in a later update.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
