@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NEW</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;600&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+    
+    <style>
+        /* --- CSS Reset & Variables --- */
+        :root {
+            --bg-color: #0f172a;
+            --text-color: #f8fafc;
+            --accent-color: #38bdf8;
+            --glass-bg: rgba(30, 41, 59, 0.7);
+            --glass-border: rgba(255, 255, 255, 0.1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            background-image: radial-gradient(circle at 50% 0%, #1e293b 0%, #0f172a 70%);
+        }
+
+        /* --- Main Container --- */
+        .container {
+            text-align: center;
+            padding: 2rem;
+            width: 90%;
+            max-width: 800px;
+            z-index: 10;
+            position: relative;
+        }
+
+        /* --- Timer Grid --- */
+        .timer-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.5rem;
+            transition: opacity 0.5s ease, transform 0.5s ease;
+        }
+
+        /* Class to hide elements when finished */
+        .hidden {
+            opacity: 0;
+            transform: translateY(-20px);
+            pointer-events: none;
+            display: none !important; 
+        }
+
+        .time-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 2rem 1rem;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+            transition: transform 0.3s ease;
+        }
+
+        .time-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--accent-color);
+        }
+
+        .number {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 3.5rem;
+            font-weight: 500;
+            color: var(--accent-color);
+            display: block;
+            line-height: 1.2;
+        }
+
+        .label {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: #94a3b8;
+            margin-top: 0.5rem;
+        }
+
+        /* --- Random Quote Text --- */
+        .quote-text {
+            margin-top: 2.5rem;
+            font-size: 1.1rem;
+            color: #cbd5e1;
+            font-weight: 300;
+            font-style: italic;
+            opacity: 0.9;
+            transition: opacity 0.5s ease;
+            min-height: 1.5em;
+        }
+
+        /* --- Link / Final Message --- */
+        .message-container {
+            display: none; /* Hidden by default */
+            flex-direction: column;
+            align-items: center;
+            animation: fadeIn 1s ease forwards;
+        }
+
+        .action-button {
+            display: inline-block;
+            background-color: var(--accent-color);
+            color: #0f172a;
+            font-weight: 700;
+            text-decoration: none;
+            padding: 1rem 2.5rem;
+            border-radius: 50px;
+            font-size: 1.1rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 20px rgba(56, 189, 248, 0.3);
+        }
+
+        .action-button:hover {
+            transform: scale(1.05);
+            background-color: #7dd3fc;
+            box-shadow: 0 0 30px rgba(56, 189, 248, 0.6);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* --- Responsive Design --- */
+        @media (max-width: 768px) {
+            .timer-grid {
+                grid-template-columns: repeat(3, 1fr); 
+            }
+        }
+
+        @media (max-width: 480px) {
+            .number { font-size: 2rem; }
+            .container { padding: 1rem; }
+            .timer-grid { gap: 0.75rem; }
+            .action-button { width: 100%; }
+            .quote-text { font-size: 1rem; margin-top: 1.5rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        
+        <!-- The Countdown Timer -->
+        <div class="timer-grid" id="timer">
+            <div class="time-card">
+                <span class="number" id="hours">00</span>
+                <span class="label">Hours</span>
+            </div>
+            <div class="time-card">
+                <span class="number" id="minutes">00</span>
+                <span class="label">Minutes</span>
+            </div>
+            <div class="time-card">
+                <span class="number" id="seconds">00</span>
+                <span class="label">Seconds</span>
+            </div>
+        </div>
+
+        <!-- Random Text Container -->
+        <p id="random-quote" class="quote-text"></p>
+
+        <!-- The Final Link (Hidden until time is up) -->
+        <div class="message-container" id="final-link">
+            <a href="https://learn.texasmath.org" class="action-button">learn.texasmath.org</a>
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        // CONFIGURATION
+        // ==========================================
+        
+        // 1. Set Timer to 9:30 AM Today
+        const now = new Date();
+        const targetDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 9, 30, 0).getTime();
+
+        // 2. YOUR LIST OF SENTENCES
+        // Add as many as you want inside the brackets, separated by commas.
+        const sentences = [
+            "HI LONDONNNN"
+            ""
+            ""
+            ""
+        ];
+
+        // ==========================================
+
+        const timerEl = document.getElementById('timer');
+        const quoteEl = document.getElementById('random-quote');
+        const linkEl = document.getElementById('final-link');
+        
+        const hoursEl = document.getElementById('hours');
+        const minutesEl = document.getElementById('minutes');
+        const secondsEl = document.getElementById('seconds');
+
+        // Display a random sentence on load
+        if (sentences.length > 0) {
+            const randomIndex = Math.floor(Math.random() * sentences.length);
+            quoteEl.innerText = sentences[randomIndex];
+        }
+
+        function updateCountdown() {
+            const currentTime = new Date().getTime();
+            const distance = targetDate - currentTime;
+
+            if (distance < 0) {
+                // --- TIMER FINISHED ---
+                clearInterval(interval);
+                
+                // Hide the timer AND the random text
+                timerEl.classList.add('hidden');
+                quoteEl.classList.add('hidden');
+                
+                // Show the Link
+                linkEl.style.display = 'flex';
+                
+                return;
+            }
+
+            // Calculations
+            const hours = Math.floor(distance / (1000 * 60 * 60));
+            const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+            // Display
+            hoursEl.innerText = hours < 10 ? '0' + hours : hours;
+            minutesEl.innerText = minutes < 10 ? '0' + minutes : minutes;
+            secondsEl.innerText = seconds < 10 ? '0' + seconds : seconds;
+        }
+
+        // Run immediately, then every second
+        updateCountdown();
+        const interval = setInterval(updateCountdown, 1000);
+    </script>
+</body>
+</html>
