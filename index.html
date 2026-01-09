@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NEW</title>
+    <title>Launch Countdown</title>
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -97,18 +97,6 @@
             margin-top: 0.5rem;
         }
 
-        /* --- Random Quote Text --- */
-        .quote-text {
-            margin-top: 2.5rem;
-            font-size: 1.1rem;
-            color: #cbd5e1;
-            font-weight: 300;
-            font-style: italic;
-            opacity: 0.9;
-            transition: opacity 0.5s ease;
-            min-height: 1.5em;
-        }
-
         /* --- Link / Final Message --- */
         .message-container {
             display: none; /* Hidden by default */
@@ -153,7 +141,6 @@
             .container { padding: 1rem; }
             .timer-grid { gap: 0.75rem; }
             .action-button { width: 100%; }
-            .quote-text { font-size: 1rem; margin-top: 1.5rem; }
         }
     </style>
 </head>
@@ -177,9 +164,6 @@
             </div>
         </div>
 
-        <!-- Random Text Container -->
-        <p id="random-quote" class="quote-text"></p>
-
         <!-- The Final Link (Hidden until time is up) -->
         <div class="message-container" id="final-link">
             <a href="https://learn.texasmath.org" class="action-button">learn.texasmath.org</a>
@@ -192,33 +176,18 @@
         // ==========================================
         
         // 1. Set Timer to 9:30 AM Today
+        // This calculates 9:30 AM based on the user's current day
         const now = new Date();
         const targetDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 9, 30, 0).getTime();
-
-        // 2. YOUR LIST OF SENTENCES
-        // Add as many as you want inside the brackets, separated by commas.
-        const sentences = [
-            "HI LONDONNNN"
-            ""
-            ""
-            ""
-        ];
 
         // ==========================================
 
         const timerEl = document.getElementById('timer');
-        const quoteEl = document.getElementById('random-quote');
         const linkEl = document.getElementById('final-link');
         
         const hoursEl = document.getElementById('hours');
         const minutesEl = document.getElementById('minutes');
         const secondsEl = document.getElementById('seconds');
-
-        // Display a random sentence on load
-        if (sentences.length > 0) {
-            const randomIndex = Math.floor(Math.random() * sentences.length);
-            quoteEl.innerText = sentences[randomIndex];
-        }
 
         function updateCountdown() {
             const currentTime = new Date().getTime();
@@ -228,9 +197,8 @@
                 // --- TIMER FINISHED ---
                 clearInterval(interval);
                 
-                // Hide the timer AND the random text
+                // Hide the timer
                 timerEl.classList.add('hidden');
-                quoteEl.classList.add('hidden');
                 
                 // Show the Link
                 linkEl.style.display = 'flex';
