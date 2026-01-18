@@ -1,0 +1,1045 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Harmonic Escape</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #050505;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: white;
+            user-select: none;
+        }
+        canvas {
+            display: block;
+        }
+        
+        /* Win Text */
+        #win-text {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 80px;
+            font-weight: 100;
+            letter-spacing: 10px;
+            color: white;
+            text-shadow: 0 0 50px rgba(255,255,255,0.5);
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.5s;
+            z-index: 4;
+            white-space: nowrap;
+        }
+        #win-text.visible { opacity: 1; }
+
+        /* Controls */
+        #controls {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            display: flex;
+            gap: 10px;
+            display: none;
+            z-index: 5;
+        }
+        
+        button {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #eee;
+            padding: 10px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.2s;
+            backdrop-filter: blur(5px);
+        }
+        button:hover {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+            box-shadow: 0 0 15px rgba(255,255,255,0.1);
+        }
+        button:active {
+            transform: translateY(0);
+        }
+
+        /* Menu Overlay */
+        .overlay {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: rgba(5, 5, 5, 0.95);
+            z-index: 10;
+            transition: opacity 0.3s;
+        }
+        .overlay.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+        
+        .menu-box {
+            background: rgba(20,20,20,0.8);
+            padding: 50px;
+            border-radius: 4px;
+            border: 1px solid rgba(255,255,255,0.05);
+            text-align: center;
+            min-width: 320px;
+            box-shadow: 0 0 80px rgba(0,0,0,0.8);
+        }
+
+        .menu-title {
+            font-size: 24px;
+            margin-bottom: 40px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: white;
+        }
+
+        .setting-group {
+            margin: 25px 0;
+            text-align: left;
+        }
+        .setting-group label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 12px;
+            color: #888;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        .setting-group input[type="range"] {
+            width: 100%;
+            cursor: pointer;
+            accent-color: #fff;
+            height: 4px;
+            background: #333;
+            border-radius: 2px;
+            appearance: none;
+        }
+        .setting-group input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            background: #fff;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(255,255,255,0.5);
+        }
+        
+        .value-display {
+            color: #fff;
+            font-weight: 400;
+        }
+
+        .start-btn {
+            background: #fff;
+            color: #000;
+            border: none;
+            padding: 15px 50px;
+            font-size: 14px;
+            font-weight: 700;
+            margin-top: 30px;
+            width: 100%;
+            letter-spacing: 2px;
+        }
+        .start-btn:hover {
+            background: #ddd;
+            transform: scale(1.02);
+            box-shadow: 0 0 30px rgba(255,255,255,0.3);
+        }
+
+        .toggle-wrapper {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-top: 10px;
+            color: #888;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        .toggle-wrapper input {
+            width: auto;
+            accent-color: #fff;
+        }
+
+        /* Best Score Display */
+        #best-score {
+            margin-top: 15px;
+            font-size: 14px;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+    </style>
+</head>
+<body>
+
+    <!-- Main Menu -->
+    <div id="menu" class="overlay">
+        <div class="menu-box">
+            <div class="menu-title">Harmonic Escape</div>
+            
+            <div class="setting-group">
+                <label>Balls: <span id="val-balls" class="value-display">1</span></label>
+                <input type="range" id="opt-balls" min="1" max="100" value="1">
+            </div>
+
+            <div class="setting-group">
+                <label>Bounciness: <span id="val-bounce" class="value-display">1.2</span></label>
+                <input type="range" id="opt-bounce" min="0.5" max="1.5" step="0.05" value="1.2">
+            </div>
+
+            <div class="setting-group">
+                <label>Closing Speed: <span id="val-speed" class="value-display">0.3</span></label>
+                <input type="range" id="opt-speed" min="0.0" max="1.0" step="0.1" value="0.3">
+            </div>
+            
+            <div class="setting-group">
+                <label>Ring Speed: <span id="val-ring-speed" class="value-display">1.0</span></label>
+                <input type="range" id="opt-ring-speed" min="0.1" max="3.0" step="0.1" value="1.0">
+            </div>
+
+            <div class="toggle-wrapper">
+                <label for="opt-sound">Sound On</label>
+                <input type="checkbox" id="opt-sound" checked>
+            </div>
+
+            <div id="best-score">Best Run: 0</div>
+
+            <button class="start-btn" onclick="startGame()">START</button>
+        </div>
+    </div>
+
+    <!-- Win Text -->
+    <div id="win-text">ESCAPED!</div>
+
+    <!-- Controls -->
+    <div id="controls">
+        <button onclick="showMenu()">Settings</button>
+        <button onclick="resetSimulation()">Restart</button>
+        <button onclick="toggleGravity()">Toggle Gravity</button>
+    </div>
+
+    <canvas id="canvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const menu = document.getElementById('menu');
+        const controls = document.getElementById('controls');
+        const winText = document.getElementById('win-text');
+        const menuTitle = document.querySelector('.menu-title');
+        const startBtn = document.querySelector('.start-btn');
+        const menuBox = document.querySelector('.menu-box');
+        const bestScoreDisplay = document.getElementById('best-score');
+
+        // UI Binding
+        const inputBalls = document.getElementById('opt-balls');
+        const displayBalls = document.getElementById('val-balls');
+        const inputBounce = document.getElementById('opt-bounce');
+        const displayBounce = document.getElementById('val-bounce');
+        const inputSpeed = document.getElementById('opt-speed');
+        const displaySpeed = document.getElementById('val-speed');
+        const inputRingSpeed = document.getElementById('opt-ring-speed');
+        const displayRingSpeed = document.getElementById('val-ring-speed');
+        const inputSound = document.getElementById('opt-sound');
+
+        // Update display values on input
+        if (inputBalls) inputBalls.oninput = () => displayBalls.innerText = inputBalls.value;
+        if (inputBounce) inputBounce.oninput = () => displayBounce.innerText = inputBounce.value;
+        if (inputSpeed) inputSpeed.oninput = () => displaySpeed.innerText = inputSpeed.value;
+        if (inputRingSpeed) inputRingSpeed.oninput = () => displayRingSpeed.innerText = inputRingSpeed.value;
+
+        let width, height, centerX, centerY, cornerDist;
+        let animationId;
+        let ringCounter = 0; 
+        let secretMode = false;
+        let keyHistory = ''; 
+        let outerBoundary = 0; 
+        let shake = 0; 
+
+        // Load High Score
+        let bestScore = parseInt(localStorage.getItem('harmonic_best')) || 0;
+        bestScoreDisplay.innerText = `Best Run: ${bestScore}`;
+
+        // Configuration
+        let config = {
+            gravity: 0.25, // Vertical gravity
+            friction: 0.998, 
+            wallBounciness: 1.2,
+            shrinkSpeed: 0.3,
+            ringSpeedMult: 1.0,
+            ringBaseRadius: 130, 
+            ringSpacing: 70, 
+            ringThickness: 8,
+            ballRadius: 8,
+            ballCount: 1,
+            soundEnabled: true,
+            gapAttraction: 0.03 // Steering strength towards gaps
+        };
+
+        // --- SECRET INPUT LISTENER ---
+        window.addEventListener('keydown', (e) => {
+            keyHistory += e.key.toLowerCase();
+            if (keyHistory.length > 5) keyHistory = keyHistory.slice(-5);
+            if (keyHistory === 'cheez' && parseInt(inputBalls.value) === 67) {
+                activateSecretMode();
+            }
+        });
+
+        function activateSecretMode() {
+            secretMode = !secretMode; 
+            
+            // Select UI elements to recolor
+            const labels = document.querySelectorAll('.setting-group label, .toggle-wrapper');
+            const values = document.querySelectorAll('.value-display');
+
+            // Update UI styles
+            if (secretMode) {
+                document.body.style.backgroundColor = '#f4f4f4';
+                document.body.style.fontFamily = "'Comic Sans MS', 'Chalkboard SE', sans-serif";
+                document.body.style.color = '#333';
+                menuBox.style.background = 'white';
+                menuBox.style.border = '4px dashed #ff4444';
+                startBtn.style.background = '#ff4444';
+                startBtn.innerText = "Start Picnic";
+                startBtn.style.color = 'white';
+                menuTitle.innerText = "Mouse Escape";
+                menuTitle.style.color = '#ff4444';
+                winText.innerText = "CHEESE SECURED!";
+                winText.style.color = '#ff9900';
+                winText.style.textShadow = '2px 2px 0px #fff';
+                
+                // Set text to black for readability on white background
+                labels.forEach(l => l.style.color = 'black');
+                values.forEach(v => v.style.color = 'black');
+                bestScoreDisplay.style.color = '#ff4444';
+
+            } else {
+                // Revert to Neon Theme
+                document.body.style.backgroundColor = '#050505';
+                document.body.style.fontFamily = "'Segoe UI', sans-serif";
+                document.body.style.color = 'white';
+                menuBox.style.background = 'rgba(20,20,20,0.8)';
+                menuBox.style.border = '1px solid rgba(255,255,255,0.05)';
+                startBtn.style.background = '#fff';
+                startBtn.innerText = "START";
+                startBtn.style.color = 'black';
+                menuTitle.innerText = "Harmonic Escape";
+                menuTitle.style.color = 'white';
+                winText.innerText = "ESCAPED!";
+                winText.style.color = 'white';
+                winText.style.textShadow = '0 0 50px rgba(255,255,255,0.5)';
+
+                // Revert text colors
+                labels.forEach(l => l.style.color = '#888');
+                values.forEach(v => v.style.color = '#fff');
+                bestScoreDisplay.style.color = '#888';
+            }
+
+            const msg = document.createElement('div');
+            msg.innerText = secretMode ? "🧀 CHEEZ MODE ACTIVATED 🧀" : "SYSTEM RESTORED";
+            msg.style.position = 'absolute';
+            msg.style.top = '20%';
+            msg.style.left = '50%';
+            msg.style.transform = 'translate(-50%, -50%)';
+            msg.style.color = secretMode ? '#ff9900' : 'white';
+            msg.style.fontFamily = secretMode ? 'Comic Sans MS' : 'Segoe UI';
+            msg.style.fontSize = '40px';
+            msg.style.fontWeight = 'bold';
+            msg.style.zIndex = '1000';
+            msg.style.pointerEvents = 'none';
+            msg.style.transition = 'opacity 1s';
+            document.body.appendChild(msg);
+            setTimeout(() => {
+                msg.style.opacity = '0';
+                setTimeout(() => msg.remove(), 1000);
+            }, 1500);
+            if (isPlaying) resetSimulation();
+        }
+
+        // State
+        let balls = [];
+        let rings = [];
+        let particles = [];
+        let gravityEnabled = true;
+        let isPlaying = false;
+        let totalRingsDestroyed = 0;
+        
+        // Audio
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        
+        // Pentatonic Scale
+        const scale = [
+            110, 130.81, 146.83, 164.81, 196.00,
+            220, 261.63, 293.66, 329.63, 392.00,
+            440, 523.25, 587.33, 659.25, 783.99,
+            880, 1046.50
+        ];
+
+        function playSound(index) {
+            if (!config.soundEnabled || !isPlaying) return;
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            
+            const osc = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+
+            if (secretMode) {
+                // Squeak
+                osc.type = 'triangle';
+                const pitch = 800 + Math.random() * 400;
+                osc.frequency.setValueAtTime(pitch, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(pitch * 1.5, audioCtx.currentTime + 0.1);
+            } else {
+                // Harmonic Chime
+                const noteIndex = Math.min(scale.length - 1, (index % 10) + 5);
+                const freq = scale[noteIndex] || 440;
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            }
+
+            const volume = Math.min(0.3, 1.5 / Math.sqrt(config.ballCount));
+            gainNode.gain.setValueAtTime(volume, audioCtx.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3);
+
+            osc.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.3);
+        }
+
+        function playBreakSound() {
+            if (!config.soundEnabled || !isPlaying) return;
+            const osc = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            
+            if (secretMode) {
+                // Crunch
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(10, audioCtx.currentTime + 0.1);
+            } else {
+                // Zip
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(100, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(800, audioCtx.currentTime + 0.1);
+            }
+            
+            gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.4);
+
+            osc.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.4);
+        }
+
+        const randomRange = (min, max) => Math.random() * (max - min) + min;
+        const toRad = (deg) => deg * (Math.PI / 180);
+
+        class Ball {
+            constructor() {
+                this.reset();
+                const miceColors = ['#e0e0e0', '#d0d0d0', '#f5f5f5', '#c0c0c0'];
+                this.mouseColor = miceColors[Math.floor(Math.random() * miceColors.length)];
+                this.color = '#fff';
+                this.trail = [];
+                this.maxTrail = 15;
+                this.animOffset = Math.random() * 100;
+            }
+
+            reset() {
+                const angle = Math.random() * Math.PI * 2;
+                const dist = Math.random() * 10; 
+                this.x = centerX + Math.cos(angle) * dist;
+                this.y = centerY + Math.sin(angle) * dist;
+                
+                this.vx = (Math.random() - 0.5) * 4;
+                this.vy = (Math.random() - 0.5) * 4;
+                this.radius = config.ballRadius;
+                this.trail = [];
+                this.escaped = false;
+            }
+
+            // Updates Forces (Gravity/Friction) but NOT position
+            updateVelocity() {
+                // VERTICAL GRAVITY
+                if (gravityEnabled) {
+                    this.vy += config.gravity;
+                }
+
+                // Friction
+                this.vx *= config.friction;
+                this.vy *= config.friction;
+                
+                // Cap speed for safety
+                const speed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+                const maxSpeed = 10; // Reduced max speed from 15 to 10
+                if (speed > maxSpeed) {
+                    this.vx = (this.vx / speed) * maxSpeed;
+                    this.vy = (this.vy / speed) * maxSpeed;
+                }
+            }
+
+            // Moves Position incrementally
+            move(stepRatio) {
+                this.x += this.vx * stepRatio;
+                this.y += this.vy * stepRatio;
+            }
+            
+            updateTrail() {
+                this.trail.push({x: this.x, y: this.y});
+                if (this.trail.length > this.maxTrail) this.trail.shift();
+            }
+
+            draw() {
+                if (secretMode) {
+                    // MOUSE DRAWING
+                    ctx.save();
+                    ctx.translate(this.x, this.y);
+                    const angle = Math.atan2(this.vy, this.vx);
+                    ctx.rotate(angle);
+                    
+                    // Tail
+                    ctx.beginPath();
+                    ctx.moveTo(-this.radius, 0);
+                    const wiggle = Math.sin(Date.now() * 0.02 + this.animOffset) * 4;
+                    ctx.quadraticCurveTo(-this.radius*2.5, wiggle, -this.radius*3.5, 0);
+                    ctx.lineWidth = 2;
+                    ctx.strokeStyle = '#ffcccc'; 
+                    ctx.stroke();
+
+                    // Ears
+                    ctx.fillStyle = '#ffcccc'; 
+                    ctx.beginPath();
+                    ctx.arc(this.radius*0.2, -this.radius*0.7, this.radius*0.5, 0, Math.PI*2);
+                    ctx.arc(this.radius*0.2, this.radius*0.7, this.radius*0.5, 0, Math.PI*2);
+                    ctx.fill();
+
+                    // Body
+                    ctx.fillStyle = this.mouseColor;
+                    ctx.beginPath();
+                    ctx.ellipse(0, 0, this.radius * 1.4, this.radius, 0, 0, Math.PI*2);
+                    ctx.fill();
+
+                    // Nose
+                    ctx.fillStyle = '#ff9999';
+                    ctx.beginPath();
+                    ctx.arc(this.radius * 1.2, 0, this.radius * 0.3, 0, Math.PI*2);
+                    ctx.fill();
+
+                    ctx.restore();
+                } else {
+                    // NEON BALL
+                    for (let i = 0; i < this.trail.length; i++) {
+                        const pos = this.trail[i];
+                        const alpha = (i / this.trail.length) * 0.5;
+                        const size = this.radius * (i / this.trail.length);
+                        
+                        ctx.beginPath();
+                        ctx.arc(pos.x, pos.y, size, 0, Math.PI * 2);
+                        ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+                        ctx.fill();
+                    }
+
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                    ctx.fillStyle = this.color;
+                    ctx.shadowColor = 'white';
+                    ctx.shadowBlur = 10;
+                    ctx.fill();
+                    ctx.shadowBlur = 0;
+                }
+            }
+        }
+
+        class Ring {
+            constructor(radius, index) {
+                this.index = index;
+                this.radius = radius;
+                this.rotation = Math.random() * Math.PI * 2;
+                
+                this.rotationSpeed = 0.015 * (Math.random() * 0.5 + 0.5) * (index % 2 === 0 ? 1 : -1) * config.ringSpeedMult; 
+                
+                // FIXED GAP SIZE (Arc Length in pixels)
+                // Instead of fixed angle, we define fixed pixel width
+                this.gapArcLength = secretMode ? 140 : 115; 
+                this.gapSize = this.gapArcLength / this.radius; 
+
+                // FIX: Initialize gaps array for collision logic
+                // The gap is centered at 0 radians relative to the ring's rotation
+                this.gaps = [0];
+                
+                // Original Neon Colors
+                const hue = (index * 30) % 360; 
+                this.baseColor = `hsl(${hue}, 80%, 50%)`;
+                this.glowColor = `hsl(${hue}, 100%, 60%)`;
+                
+                // Cheez Colors
+                if (secretMode) {
+                    const cheeses = ['#FFC107', '#FFB300', '#FF9800', '#FFD54F'];
+                    this.cheeseColor = cheeses[index % cheeses.length];
+                }
+
+                this.active = true;
+                this.thickness = config.ringThickness;
+                this.pulse = 0; 
+                
+                // Cheese Holes
+                this.cheeseHoles = [];
+                const holeCount = 12;
+                for(let i=0; i<holeCount; i++) {
+                    this.cheeseHoles.push({
+                        angle: (Math.PI * 2 / holeCount) * i + Math.random()*0.5,
+                        size: Math.random() * 5 + 2
+                    });
+                }
+            }
+
+            update() {
+                if (!this.active) return;
+                this.rotation += this.rotationSpeed;
+                this.radius -= config.shrinkSpeed;
+                
+                // Update gap angle based on new radius to keep physical size constant
+                // Clamp to prevent gap becoming entire ring at small radii
+                this.gapSize = Math.min(Math.PI, this.gapArcLength / Math.max(10, this.radius));
+
+                if (this.radius < 20) this.active = false; 
+                if (this.pulse > 0) this.pulse -= 0.1;
+            }
+
+            draw() {
+                if (!this.active) return;
+                ctx.save();
+                ctx.translate(centerX, centerY);
+                ctx.rotate(this.rotation);
+                
+                if (secretMode) {
+                    // Cheese Ring
+                    ctx.beginPath();
+                    ctx.arc(0, 0, this.radius, this.gapSize / 2, Math.PI * 2 - this.gapSize / 2);
+                    ctx.lineCap = 'round';
+                    
+                    if (this.pulse > 0) {
+                        ctx.strokeStyle = '#fff';
+                        ctx.lineWidth = this.thickness + 4;
+                    } else {
+                        ctx.strokeStyle = this.cheeseColor || '#FDB927';
+                        ctx.lineWidth = this.thickness * 2.5;
+                    }
+                    ctx.stroke();
+
+                    // Holes
+                    if (this.pulse <= 0) {
+                        this.cheeseHoles.forEach(h => {
+                            const hx = Math.cos(h.angle) * this.radius;
+                            const hy = Math.sin(h.angle) * this.radius;
+                            ctx.beginPath();
+                            ctx.arc(hx, hy, h.size, 0, Math.PI*2);
+                            ctx.fillStyle = 'rgba(200, 100, 0, 0.6)';
+                            ctx.fill();
+                        });
+                    }
+                } else {
+                    // Neon Ring
+                    ctx.beginPath();
+                    ctx.arc(0, 0, this.radius, this.gapSize / 2, Math.PI * 2 - this.gapSize / 2);
+                    ctx.lineCap = 'round';
+                    
+                    if (this.pulse > 0) {
+                        ctx.strokeStyle = '#fff';
+                        ctx.lineWidth = this.thickness + 2;
+                        ctx.shadowColor = '#fff';
+                        ctx.shadowBlur = 20;
+                    } else {
+                        ctx.strokeStyle = this.baseColor;
+                        ctx.lineWidth = this.thickness;
+                        ctx.shadowColor = this.glowColor;
+                        ctx.shadowBlur = 10;
+                    }
+                    ctx.stroke();
+                }
+                ctx.restore();
+            }
+
+            hit() {
+                this.pulse = 1.0;
+                playSound(this.index);
+            }
+
+            break() {
+                this.active = false;
+                playBreakSound();
+                createExplosion(centerX, centerY, this.radius, secretMode ? (this.cheeseColor || '#FDB927') : this.glowColor);
+                totalRingsDestroyed++;
+                
+                // Update High Score if needed
+                if (totalRingsDestroyed > bestScore) {
+                    bestScore = totalRingsDestroyed;
+                    localStorage.setItem('harmonic_best', bestScore);
+                    bestScoreDisplay.innerText = `Best Run: ${bestScore}`;
+                }
+            }
+        }
+
+        class Particle {
+            constructor(x, y, color, speed) {
+                this.x = x;
+                this.y = y;
+                this.color = color;
+                const angle = Math.random() * Math.PI * 2;
+                this.vx = Math.cos(angle) * speed;
+                this.vy = Math.sin(angle) * speed;
+                this.life = 1.0;
+                this.decay = randomRange(0.015, 0.03);
+            }
+
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.life -= this.decay;
+                this.vx *= 0.96;
+                this.vy *= 0.96;
+            }
+
+            draw() {
+                ctx.globalAlpha = this.life;
+                ctx.fillStyle = this.color;
+                
+                if (secretMode) {
+                    ctx.fillRect(this.x-2, this.y-2, 4, 4);
+                } else {
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, 2, 0, Math.PI*2);
+                    ctx.fill();
+                }
+                ctx.globalAlpha = 1.0;
+            }
+        }
+
+        function createExplosion(x, y, radius, color) {
+            const count = 60;
+            for (let i = 0; i < count; i++) {
+                const angle = (Math.PI * 2 / count) * i;
+                const px = x + Math.cos(angle) * radius;
+                const py = y + Math.sin(angle) * radius;
+                particles.push(new Particle(px, py, color, randomRange(1, 5)));
+            }
+        }
+
+        function checkCollisions() {
+            const activeRings = rings.filter(r => r.active);
+            balls.forEach(ball => {
+                const dx = ball.x - centerX;
+                const dy = ball.y - centerY;
+                const dist = Math.sqrt(dx*dx + dy*dy);
+                
+                if (dist > cornerDist + 100) {
+                    ball.escaped = true;
+                    return;
+                }
+                if (ball.escaped) return;
+
+                const angle = Math.atan2(dy, dx);
+
+                for (let ring of activeRings) {
+                    // --- GAP STEERING LOGIC ---
+                    // If ball is inside the ring and relatively close to the wall (outer 40%)
+                    if (dist < ring.radius && dist > ring.radius * 0.6) {
+                        // Normalize ball angle to 0..2PI relative to ring rotation
+                        let normBallAngle = angle - ring.rotation;
+                        normBallAngle = normBallAngle % (Math.PI*2);
+                        if(normBallAngle < 0) normBallAngle += Math.PI*2;
+
+                        // Find nearest gap
+                        let bestGapDist = Infinity;
+                        
+                        for (let gAngle of ring.gaps) {
+                            // Calculate signed distance to this gap
+                            let diff = gAngle - normBallAngle;
+                            // Normalize diff to -PI to PI to find shortest path direction
+                            while (diff > Math.PI) diff -= Math.PI * 2;
+                            while (diff < -Math.PI) diff += Math.PI * 2;
+                            
+                            if (Math.abs(diff) < Math.abs(bestGapDist)) {
+                                bestGapDist = diff;
+                            }
+                        }
+
+                        // Apply steering force
+                        // bestGapDist > 0 means gap is Counter-Clockwise. < 0 means Clockwise.
+                        const steerDir = (bestGapDist > 0) ? 1 : -1;
+                        
+                        // Tangent vector (perpendicular to radius)
+                        // Standard tangent (-y, x) points Counter-Clockwise
+                        const tanX = -Math.sin(angle); 
+                        const tanY = Math.cos(angle);
+
+                        ball.vx += tanX * steerDir * config.gapAttraction;
+                        ball.vy += tanY * steerDir * config.gapAttraction;
+                    }
+
+                    // --- COLLISION LOGIC ---
+
+                    // Check if ball passed ring
+                    if (dist > ring.radius + ball.radius + ring.thickness/2) {
+                        ring.break();
+                        return; 
+                    }
+                    
+                    const dr = Math.abs(dist - ring.radius);
+                    if (dr < ball.radius + ring.thickness/2) {
+                        let relativeAngle = angle - ring.rotation;
+                        while (relativeAngle > Math.PI) relativeAngle -= Math.PI * 2;
+                        while (relativeAngle < -Math.PI) relativeAngle += Math.PI * 2;
+                        
+                        // Calculate half gap based on Arc Length
+                        const halfGap = ring.gapSize / 2;
+                        const ballAngularSize = Math.atan2(ball.radius, dist); 
+                        
+                        // Hit logic
+                        // We need to check if the ball is NOT in a gap.
+                        // Since we support multiple gaps (tech mode) or single (cheez), we iterate gaps.
+                        let inGap = false;
+                        
+                        // Re-calculate normalized angles for collision exactness
+                        let normBallAngleColl = angle - ring.rotation;
+                        normBallAngleColl = normBallAngleColl % (Math.PI*2);
+                        if(normBallAngleColl < 0) normBallAngleColl += Math.PI*2;
+
+                        for(let gapStart of ring.gaps) {
+                            let diff = gapStart - normBallAngleColl;
+                            while (diff > Math.PI) diff -= Math.PI * 2;
+                            while (diff < -Math.PI) diff += Math.PI * 2;
+                            
+                            if (Math.abs(diff) < halfGap - ballAngularSize) {
+                                inGap = true;
+                                break;
+                            }
+                        }
+
+                        if (!inGap) {
+                            const normalX = dx / dist;
+                            const normalY = dy / dist;
+                            
+                            // Prevent sticking:
+                            // Increased overlap buffer to kick it out aggressively
+                            let overlap = (ball.radius + ring.thickness/2) - dr + 4;
+                            
+                            if (dist < ring.radius) {
+                                // Hitting inner wall - Push INWARD (away from ring center)
+                                ball.x -= normalX * overlap;
+                                ball.y -= normalY * overlap;
+                            } else {
+                                // Hitting outer wall
+                                ball.x += normalX * overlap;
+                                ball.y += normalY * overlap;
+                            }
+                            
+                            // Bounce Logic with Relative Wall Velocity
+                            const vDotN = ball.vx * normalX + ball.vy * normalY; // Ball radial speed
+                            
+                            // Calculate Wall Speed (Shrinking Inwards)
+                            const wallVelRadial = -config.shrinkSpeed; 
+                            
+                            // Relative velocity along normal (V_ball - V_wall)
+                            const vRel = vDotN - wallVelRadial;
+                            
+                            // Reflect relative velocity
+                            const vRelNew = -vRel * config.wallBounciness;
+                            
+                            // Convert back to ball velocity
+                            const vDotN_New = vRelNew + wallVelRadial;
+                            
+                            // Apply velocity change vector
+                            const dv = vDotN_New - vDotN;
+                            ball.vx += dv * normalX;
+                            ball.vy += dv * normalY;
+                            
+                            // --- UNPREDICTABLE SIDE BOUNCE ---
+                            const tangentX = -normalY;
+                            const tangentY = normalX;
+                            
+                            // Random Side Kick
+                            const randomKick = (Math.random() - 0.5) * 8; 
+                            
+                            // Add extra spin force based on ring rotation
+                            const spinForce = ring.rotationSpeed * 30;
+                            
+                            ball.vx += tangentX * (spinForce + randomKick);
+                            ball.vy += tangentY * (spinForce + randomKick);
+                            
+                            // Play sound if hit was hard enough
+                            if (Math.abs(vRel) > 0.5) ring.hit();
+                        }
+                    }
+                }
+            });
+        }
+
+        function manageRings() {
+            outerBoundary -= config.shrinkSpeed;
+            const spawnLimit = cornerDist;
+
+            if (spawnLimit - outerBoundary >= config.ringSpacing) {
+                while (outerBoundary < spawnLimit) {
+                    outerBoundary += config.ringSpacing;
+                    if (outerBoundary > config.ringBaseRadius) {
+                        rings.push(new Ring(outerBoundary, ringCounter++));
+                    }
+                }
+            }
+            rings = rings.filter(r => r.active);
+        }
+
+        function checkWinCondition() {
+            if (balls.some(b => b.escaped)) {
+                winText.classList.add('visible');
+            }
+        }
+
+        function startGame() {
+            config.ballCount = parseInt(inputBalls.value);
+            config.wallBounciness = parseFloat(inputBounce.value);
+            config.shrinkSpeed = parseFloat(inputSpeed.value);
+            config.ringSpeedMult = parseFloat(inputRingSpeed.value);
+            config.soundEnabled = inputSound.checked;
+            if (config.ballCount > 10) config.ballRadius = 5;
+            else config.ballRadius = 8;
+            if (config.soundEnabled && audioCtx.state === 'suspended') audioCtx.resume();
+            menu.classList.add('hidden');
+            controls.style.display = 'flex';
+            isPlaying = true;
+            resetSimulation();
+        }
+
+        function showMenu() {
+            menu.classList.remove('hidden');
+            controls.style.display = 'none';
+            isPlaying = false;
+        }
+
+        function resetSimulation() {
+            ringCounter = 0;
+            rings = [];
+            outerBoundary = cornerDist; 
+            let r = outerBoundary;
+            while (r > config.ringBaseRadius) {
+                rings.push(new Ring(r, ringCounter++));
+                r -= config.ringSpacing;
+            }
+            rings.reverse();
+
+            balls = [];
+            for (let i = 0; i < config.ballCount; i++) {
+                balls.push(new Ball());
+            }
+
+            particles = [];
+            winText.classList.remove('visible');
+            totalRingsDestroyed = 0;
+        }
+
+        function toggleGravity() {
+            gravityEnabled = !gravityEnabled;
+        }
+
+        function init() {
+            width = window.innerWidth;
+            height = window.innerHeight;
+            canvas.width = width;
+            canvas.height = height;
+            centerX = width / 2;
+            centerY = height / 2;
+            cornerDist = Math.hypot(centerX, centerY);
+        }
+
+        function drawPicnicPattern() {
+            const tileSize = 60;
+            const offset = (Date.now() * 0.02) % (tileSize * 2);
+            ctx.fillStyle = '#ffffff'; 
+            ctx.fillRect(0, 0, width, height);
+            ctx.fillStyle = 'rgba(255, 100, 100, 0.3)'; 
+            for(let x = -tileSize*2; x < width + tileSize; x+=tileSize) {
+                for(let y = -tileSize*2; y < height + tileSize; y+=tileSize) {
+                    if ((Math.floor((x+offset)/tileSize) + Math.floor((y+offset)/tileSize)) % 2 === 0) {
+                        ctx.fillRect(x, y, tileSize, tileSize);
+                    }
+                }
+            }
+        }
+
+        function loop() {
+            if (secretMode) {
+                drawPicnicPattern();
+            } else {
+                ctx.fillStyle = '#050505';
+                ctx.fillRect(0, 0, width, height);
+            }
+
+            ctx.save();
+            ctx.fillStyle = secretMode ? 'rgba(0,0,0,0.1)' : '#222'; 
+            ctx.font = secretMode ? 'bold 300px "Comic Sans MS"' : 'bold 300px system-ui';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(totalRingsDestroyed, centerX, centerY);
+            ctx.restore();
+
+            if (isPlaying) {
+                manageRings();
+                
+                // PHYSICS SUB-STEPPING
+                const subSteps = 4;
+                // Calculate forces for the frame first
+                balls.forEach(b => b.updateVelocity()); 
+                
+                for(let s=0; s<subSteps; s++) {
+                    // Move partial distance
+                    balls.forEach(b => b.move(1/subSteps));
+                    // Check collision at this new position
+                    checkCollisions();
+                }
+                
+                // Update trails only once per frame to avoid clutter
+                balls.forEach(b => b.updateTrail());
+
+                checkWinCondition();
+                rings.forEach(r => r.update());
+                particles.forEach((p, i) => {
+                    p.update();
+                    if (p.life <= 0) particles.splice(i, 1);
+                });
+            }
+
+            ctx.fillStyle = secretMode ? '#ff4444' : '#333';
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, 3, 0, Math.PI*2);
+            ctx.fill();
+
+            rings.forEach(r => r.draw());
+            balls.forEach(b => b.draw());
+            particles.forEach(p => p.draw());
+
+            animationId = requestAnimationFrame(loop);
+        }
+
+        window.addEventListener('resize', init);
+        init();
+        loop();
+
+    </script>
+</body>
+</html>
