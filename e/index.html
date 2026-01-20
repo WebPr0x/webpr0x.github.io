@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Harmonic Escape</title>
+    <title>hi london</title>
     <style>
         body {
             margin: 0;
@@ -217,6 +217,12 @@
                 <input type="range" id="opt-gap" min="60" max="180" step="5" value="115">
             </div>
 
+            <!-- NEW: Ball Size Slider -->
+            <div class="setting-group">
+                <label>Ball Size: <span id="val-size" class="value-display">8</span></label>
+                <input type="range" id="opt-size" min="3" max="25" step="1" value="8">
+            </div>
+
             <div class="toggle-wrapper">
                 <label for="opt-sound">Sound On</label>
                 <input type="checkbox" id="opt-sound" checked>
@@ -262,6 +268,8 @@
         const displayRingSpeed = document.getElementById('val-ring-speed');
         const inputGap = document.getElementById('opt-gap');
         const displayGap = document.getElementById('val-gap');
+        const inputSize = document.getElementById('opt-size'); // New Binding
+        const displaySize = document.getElementById('val-size'); // New Binding
         const inputSound = document.getElementById('opt-sound');
 
         // Update display values on input
@@ -270,6 +278,7 @@
         if (inputSpeed) inputSpeed.oninput = () => displaySpeed.innerText = inputSpeed.value;
         if (inputRingSpeed) inputRingSpeed.oninput = () => displayRingSpeed.innerText = inputRingSpeed.value;
         if (inputGap) inputGap.oninput = () => displayGap.innerText = inputGap.value;
+        if (inputSize) inputSize.oninput = () => displaySize.innerText = inputSize.value; // New Update Logic
 
         let width, height, centerX, centerY, cornerDist;
         let animationId;
@@ -868,10 +877,13 @@
             config.shrinkSpeed = parseFloat(inputSpeed.value);
             config.ringSpeedMult = parseFloat(inputRingSpeed.value);
             config.soundEnabled = inputSound.checked;
-            config.gapSize = parseInt(inputGap.value); // Load gap size
+            config.gapSize = parseInt(inputGap.value); 
+            config.ballRadius = parseInt(inputSize.value); // Load Ball Size from slider
 
-            if (config.ballCount > 10) config.ballRadius = 5;
-            else config.ballRadius = 8;
+            // REMOVED old automatic sizing logic
+            // if (config.ballCount > 10) config.ballRadius = 5;
+            // else config.ballRadius = 8;
+
             if (config.soundEnabled && audioCtx.state === 'suspended') audioCtx.resume();
             menu.classList.add('hidden');
             controls.style.display = 'flex';
