@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>e</title>
+    <title>Harmonic Escape</title>
     <style>
         body {
             margin: 0;
@@ -188,7 +188,9 @@
 
     <!-- Main Menu -->
     <div id="menu" class="overlay">
-        <div class="menu-box">            
+        <div class="menu-box">
+            <div class="menu-title">Harmonic Escape</div>
+            
             <div class="setting-group">
                 <label>Balls: <span id="val-balls" class="value-display">1</span></label>
                 <input type="range" id="opt-balls" min="1" max="100" value="1">
@@ -207,6 +209,12 @@
             <div class="setting-group">
                 <label>Ring Speed: <span id="val-ring-speed" class="value-display">1.0</span></label>
                 <input type="range" id="opt-ring-speed" min="0.1" max="3.0" step="0.1" value="1.0">
+            </div>
+
+            <!-- New Gap Size Slider -->
+            <div class="setting-group">
+                <label>Gap Size: <span id="val-gap" class="value-display">115</span></label>
+                <input type="range" id="opt-gap" min="60" max="180" step="5" value="115">
             </div>
 
             <div class="toggle-wrapper">
@@ -252,6 +260,8 @@
         const displaySpeed = document.getElementById('val-speed');
         const inputRingSpeed = document.getElementById('opt-ring-speed');
         const displayRingSpeed = document.getElementById('val-ring-speed');
+        const inputGap = document.getElementById('opt-gap');
+        const displayGap = document.getElementById('val-gap');
         const inputSound = document.getElementById('opt-sound');
 
         // Update display values on input
@@ -259,6 +269,7 @@
         if (inputBounce) inputBounce.oninput = () => displayBounce.innerText = inputBounce.value;
         if (inputSpeed) inputSpeed.oninput = () => displaySpeed.innerText = inputSpeed.value;
         if (inputRingSpeed) inputRingSpeed.oninput = () => displayRingSpeed.innerText = inputRingSpeed.value;
+        if (inputGap) inputGap.oninput = () => displayGap.innerText = inputGap.value;
 
         let width, height, centerX, centerY, cornerDist;
         let animationId;
@@ -285,7 +296,8 @@
             ballRadius: 8,
             ballCount: 1,
             soundEnabled: true,
-            gapAttraction: 0.03 // Steering strength towards gaps
+            gapAttraction: 0.03, // Steering strength towards gaps
+            gapSize: 115
         };
 
         // --- SECRET INPUT LISTENER ---
@@ -419,29 +431,7 @@
         }
 
         function playBreakSound() {
-            if (!config.soundEnabled || !isPlaying) return;
-            const osc = audioCtx.createOscillator();
-            const gainNode = audioCtx.createGain();
-            
-            if (secretMode) {
-                // Crunch
-                osc.type = 'square';
-                osc.frequency.setValueAtTime(150, audioCtx.currentTime);
-                osc.frequency.exponentialRampToValueAtTime(10, audioCtx.currentTime + 0.1);
-            } else {
-                // Zip
-                osc.type = 'triangle';
-                osc.frequency.setValueAtTime(100, audioCtx.currentTime);
-                osc.frequency.exponentialRampToValueAtTime(800, audioCtx.currentTime + 0.1);
-            }
-            
-            gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
-            gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.4);
-
-            osc.connect(gainNode);
-            gainNode.connect(audioCtx.destination);
-            osc.start();
-            osc.stop(audioCtx.currentTime + 0.4);
+            // Sound effect removed for breaking rings
         }
 
         const randomRange = (min, max) => Math.random() * (max - min) + min;
@@ -572,8 +562,7 @@
                 this.rotationSpeed = 0.015 * (Math.random() * 0.5 + 0.5) * (index % 2 === 0 ? 1 : -1) * config.ringSpeedMult; 
                 
                 // FIXED GAP SIZE (Arc Length in pixels)
-                // Instead of fixed angle, we define fixed pixel width
-                this.gapArcLength = secretMode ? 140 : 115; 
+                this.gapArcLength = config.gapSize;
                 this.gapSize = this.gapArcLength / this.radius; 
 
                 // FIX: Initialize gaps array for collision logic
@@ -680,7 +669,7 @@
 
             break() {
                 this.active = false;
-                playBreakSound();
+                // playBreakSound(); // REMOVED as per request
                 createExplosion(centerX, centerY, this.radius, secretMode ? (this.cheeseColor || '#FDB927') : this.glowColor);
                 totalRingsDestroyed++;
                 
@@ -754,42 +743,6 @@
                 const angle = Math.atan2(dy, dx);
 
                 for (let ring of activeRings) {
-                    // --- GAP STEERING LOGIC ---
-                    // If ball is inside the ring and relatively close to the wall (outer 40%)
-                    if (dist < ring.radius && dist > ring.radius * 0.6) {
-                        // Normalize ball angle to 0..2PI relative to ring rotation
-                        let normBallAngle = angle - ring.rotation;
-                        normBallAngle = normBallAngle % (Math.PI*2);
-                        if(normBallAngle < 0) normBallAngle += Math.PI*2;
-
-                        // Find nearest gap
-                        let bestGapDist = Infinity;
-                        
-                        for (let gAngle of ring.gaps) {
-                            // Calculate signed distance to this gap
-                            let diff = gAngle - normBallAngle;
-                            // Normalize diff to -PI to PI to find shortest path direction
-                            while (diff > Math.PI) diff -= Math.PI * 2;
-                            while (diff < -Math.PI) diff += Math.PI * 2;
-                            
-                            if (Math.abs(diff) < Math.abs(bestGapDist)) {
-                                bestGapDist = diff;
-                            }
-                        }
-
-                        // Apply steering force
-                        // bestGapDist > 0 means gap is Counter-Clockwise. < 0 means Clockwise.
-                        const steerDir = (bestGapDist > 0) ? 1 : -1;
-                        
-                        // Tangent vector (perpendicular to radius)
-                        // Standard tangent (-y, x) points Counter-Clockwise
-                        const tanX = -Math.sin(angle); 
-                        const tanY = Math.cos(angle);
-
-                        ball.vx += tanX * steerDir * config.gapAttraction;
-                        ball.vy += tanY * steerDir * config.gapAttraction;
-                    }
-
                     // --- COLLISION LOGIC ---
 
                     // Check if ball passed ring
@@ -915,6 +868,8 @@
             config.shrinkSpeed = parseFloat(inputSpeed.value);
             config.ringSpeedMult = parseFloat(inputRingSpeed.value);
             config.soundEnabled = inputSound.checked;
+            config.gapSize = parseInt(inputGap.value); // Load gap size
+
             if (config.ballCount > 10) config.ballRadius = 5;
             else config.ballRadius = 8;
             if (config.soundEnabled && audioCtx.state === 'suspended') audioCtx.resume();
