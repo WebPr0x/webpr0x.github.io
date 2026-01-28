@@ -1,0 +1,1684 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neon Cube Runner + Editor</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #111;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+            font-family: 'Press Start 2P', cursive;
+            color: white;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        #game-container {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            aspect-ratio: 2 / 1;
+            box-shadow: 0 0 50px rgba(0, 255, 255, 0.1);
+            background: #1a1a1a;
+            border: 4px solid #333;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            cursor: crosshair;
+        }
+
+        #ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            z-index: 5;
+        }
+
+        .top-ui {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            width: 100%;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        #score-display {
+            font-size: 20px;
+            text-shadow: 2px 2px 0 #000;
+            width: 150px;
+            text-align: right;
+        }
+
+        #attempt-display {
+            font-size: 20px;
+            text-shadow: 2px 2px 0 #000;
+            color: #ffaa00;
+            width: 150px;
+        }
+
+        /* Progress Bar Styles */
+        #progress-container {
+            position: relative;
+            width: 40%;
+            height: 24px;
+            background: rgba(0, 0, 0, 0.6);
+            border: 2px solid #fff;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: -5px; /* Visual alignment */
+        }
+
+        #progress-fill {
+            width: 0%;
+            height: 100%;
+            background: linear-gradient(90deg, #00ff00, #aaff00);
+            transition: width 0.1s linear;
+        }
+
+        #progress-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 12px;
+            color: #fff;
+            text-shadow: 1px 1px 0 #000;
+            z-index: 2;
+        }
+
+        /* Screens */
+        #start-screen, #pause-screen, #data-screen, #level-select-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85); 
+            backdrop-filter: blur(4px);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+            pointer-events: auto;
+            transition: opacity 0.2s;
+        }
+
+        .hidden {
+            opacity: 0;
+            pointer-events: none !important;
+            display: none !important;
+        }
+
+        h1 {
+            color: #ffd700;
+            font-size: 48px;
+            text-align: center;
+            line-height: 1.2;
+            margin-bottom: 20px;
+            text-shadow: 4px 4px 0 #000, -2px -2px 0 #000, 4px 4px 10px rgba(0,0,0,0.5);
+            transform: skew(-5deg);
+        }
+
+        .subtitle {
+            font-size: 14px;
+            color: #00ffff;
+            text-shadow: 2px 2px 0 #000;
+            margin-top: -15px;
+            margin-bottom: 40px;
+            letter-spacing: 2px;
+        }
+
+        p {
+            color: #fff;
+            font-size: 12px;
+            text-shadow: 1px 1px 0 #000;
+            margin-bottom: 30px;
+            text-align: center;
+            line-height: 1.6;
+            max-width: 80%;
+        }
+
+        /* Buttons */
+        button {
+            background: #ff0055;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-family: 'Press Start 2P', cursive;
+            font-size: 14px;
+            cursor: pointer;
+            box-shadow: 4px 4px 0 #900;
+            transition: transform 0.1s;
+            margin: 10px;
+        }
+        button:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0 #900; }
+        button:hover { filter: brightness(1.2); }
+
+        .btn-blue { background: #00aaff; box-shadow: 4px 4px 0 #005599; }
+        .btn-blue:active { box-shadow: 2px 2px 0 #005599; }
+        
+        .btn-green { background: #00cc44; box-shadow: 4px 4px 0 #006622; }
+        .btn-green:active { box-shadow: 2px 2px 0 #006622; }
+
+        .play-btn {
+            width: 80px;
+            height: 80px;
+            background: radial-gradient(circle, #00ff00 0%, #00aa00 100%);
+            border: 3px solid #fff;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.4), inset 0 0 10px rgba(255,255,255,0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: transform 0.1s, filter 0.1s;
+            margin-bottom: 20px;
+        }
+        .play-btn:hover { transform: scale(1.1); filter: brightness(1.2); }
+        .play-btn:active { transform: scale(0.95); }
+        .play-icon {
+            width: 0; height: 0; 
+            border-top: 15px solid transparent;
+            border-bottom: 15px solid transparent;
+            border-left: 25px solid white;
+            margin-left: 5px;
+        }
+
+        .controls-hint {
+            margin-top: 20px;
+            display: flex;
+            gap: 20px;
+        }
+        .key-hint {
+            background: rgba(0,0,0,0.5);
+            padding: 8px 12px;
+            border-radius: 4px;
+            border: 1px solid #555;
+            font-size: 10px;
+            color: #ccc;
+        }
+
+        /* Level Select Styles */
+        .level-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            width: 70%;
+            max-height: 70%;
+            overflow-y: auto;
+        }
+        
+        .level-btn {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            padding: 20px;
+            margin: 0;
+            background: #222;
+            border: 2px solid #555;
+            box-shadow: 4px 4px 0 #000;
+            transition: transform 0.1s, background 0.1s;
+        }
+        
+        .level-btn:hover {
+            background: #333;
+            transform: translateX(5px);
+        }
+        
+        .level-name {
+            font-size: 14px;
+            color: #fff;
+        }
+        
+        .level-diff {
+            font-size: 10px;
+            padding: 5px 10px;
+            border-radius: 4px;
+            color: #000;
+        }
+
+        /* Editor UI */
+        #editor-ui {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            border-top: 2px solid #555;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            pointer-events: auto;
+            box-sizing: border-box;
+            z-index: 100;
+        }
+        .editor-row {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .tool-btn {
+            padding: 8px 12px;
+            font-size: 10px;
+            background: #333;
+            box-shadow: 2px 2px 0 #111;
+            min-width: 40px;
+            cursor: pointer;
+        }
+        .tool-btn.active {
+            background: #00ff00;
+            color: black;
+            box-shadow: inset 2px 2px 0 #005500;
+        }
+        .tool-btn.utility { background: #555; }
+        
+        .tool-btn[data-tool="eraser"].active {
+            background: #ff0055;
+            color: white;
+            box-shadow: inset 2px 2px 0 #900;
+        }
+        
+        /* Data Modal */
+        #data-input {
+            width: 80%;
+            height: 100px;
+            background: #222;
+            color: #0f0;
+            font-family: monospace;
+            border: 2px solid #555;
+            padding: 10px;
+            margin-bottom: 20px;
+            resize: none;
+        }
+        #data-msg {
+            color: #0f0;
+            font-size: 10px;
+            margin-bottom: 10px;
+            height: 12px;
+        }
+
+        @media (max-width: 600px) {
+            h1 { font-size: 28px; }
+            .play-btn { width: 60px; height: 60px; }
+            .tool-btn { padding: 6px; font-size: 8px; }
+            .top-ui { padding: 10px; }
+            #score-display, #attempt-display { font-size: 14px; width: 100px; }
+            .level-name { font-size: 10px; }
+            #progress-container { width: 30%; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="game-container">
+        <canvas id="gameCanvas" width="800" height="400"></canvas>
+        
+        <div id="ui-layer">
+            <div class="top-ui">
+                <div id="attempt-display">ATTEMPT 1</div>
+                
+                <div id="progress-container" class="hidden">
+                    <div id="progress-fill"></div>
+                    <div id="progress-text">0%</div>
+                </div>
+
+                <div id="score-display">SCORE: 0</div>
+            </div>
+        </div>
+
+        <!-- START SCREEN -->
+        <div id="start-screen">
+            <h1>NEON JUMP</h1>
+            <div class="subtitle">BUILDER EDITION</div>
+            
+            <div id="start-btn" class="play-btn">
+                <div class="play-icon"></div>
+            </div>
+
+            <div class="editor-row">
+                <button id="editor-btn" class="btn-blue">LEVEL EDITOR</button>
+                <button id="import-btn" class="utility">DATA / IMPORT</button>
+            </div>
+
+            <div class="controls-hint">
+                <div class="key-hint">TAP TO JUMP</div>
+                <div class="key-hint">HOLD TO FLY</div>
+                <div class="key-hint">ESC TO PAUSE</div>
+            </div>
+        </div>
+
+        <!-- LEVEL SELECT SCREEN -->
+        <div id="level-select-screen" class="hidden">
+            <h1>SELECT LEVEL</h1>
+            <div class="level-grid">
+                <button class="level-btn" onclick="startMainLevel('stereo')">
+                    <div class="level-name">STEREO MADNESS</div>
+                    <div class="level-diff" style="background:#00aaff;">EASY</div>
+                </button>
+                <button class="level-btn" onclick="startMainLevel('backontrack')">
+                    <div class="level-name">BACK ON TRACK</div>
+                    <div class="level-diff" style="background:#ff00ff;">MEDIUM</div>
+                </button>
+                <button class="level-btn" onclick="startMainLevel('clubstep')">
+                    <div class="level-name">CLUBSTEP</div>
+                    <div class="level-diff" style="background:#ff0000; color:white;">HARD</div>
+                </button>
+                <button class="level-btn" onclick="startMainLevel('bloodbath')" style="border-color: #990000;">
+                    <div class="level-name" style="color: #ff3333; text-shadow: 2px 2px 0 #000;">BLOODBATH</div>
+                    <div class="level-diff" style="background:#660000; color:white; border: 1px solid #ff0000;">EXTREME</div>
+                </button>
+                <button class="level-btn" onclick="startMainLevel('cataclysm')" style="border-color: #440099;">
+                    <div class="level-name" style="color: #cc66ff; text-shadow: 2px 2px 0 #000;">CATACLYSM</div>
+                    <div class="level-diff" style="background:#330066; color:white; border: 1px solid #cc66ff;">DEMON</div>
+                </button>
+                <button class="level-btn" onclick="attempts=1; startGame()">
+                    <div class="level-name">ENDLESS MODE</div>
+                    <div class="level-diff" style="background:#fff;">INF</div>
+                </button>
+            </div>
+            <button class="utility" onclick="backToMenu()">BACK</button>
+        </div>
+
+        <!-- PAUSE SCREEN -->
+        <div id="pause-screen" class="hidden">
+            <h1>PAUSED</h1>
+            <button id="resume-btn" class="btn-green">RESUME</button>
+            <button id="pause-restart-btn">RESTART</button>
+            <button id="back-editor-btn" class="hidden btn-blue">BACK TO EDITOR</button>
+            <button id="pause-menu-btn" class="utility">EXIT TO MENU</button>
+        </div>
+
+        <!-- DATA SCREEN -->
+        <div id="data-screen" class="hidden">
+            <h2>LEVEL DATA</h2>
+            <div id="data-msg"></div>
+            <textarea id="data-input" placeholder="Paste level code here..."></textarea>
+            <div class="editor-row">
+                <button id="copy-data-btn" class="btn-blue">COPY</button>
+                <button id="load-data-btn" class="btn-green">LOAD</button>
+                <button id="close-data-btn" class="utility">CLOSE</button>
+            </div>
+        </div>
+
+        <!-- EDITOR UI -->
+        <div id="editor-ui" class="hidden">
+            <div class="editor-row">
+                <button class="tool-btn active" data-tool="block">BLOCK</button>
+                <button class="tool-btn" data-tool="spike">SPIKE</button>
+                <button class="tool-btn" data-tool="ceilspike">CEIL SPIKE</button>
+                <button class="tool-btn" data-tool="coin">COIN</button>
+                <button class="tool-btn" data-tool="jumppad">PAD</button>
+                <button class="tool-btn" data-tool="portal-ship">SHIP</button>
+                <button class="tool-btn" data-tool="portal-cube">CUBE</button>
+                <button class="tool-btn utility" data-tool="pan" style="border: 1px solid #00aaff; color: #00aaff;">PAN</button>
+                <button class="tool-btn utility" data-tool="eraser" style="border: 1px solid #ff0055; color: #ff0055;">ERASE</button>
+            </div>
+            <div class="editor-row">
+                <button class="tool-btn utility" onclick="moveEditor(-200, 0)">&lt;&lt;</button>
+                <button class="tool-btn utility" onclick="moveEditor(200, 0)">&gt;&gt;</button>
+                <button class="tool-btn utility" onclick="clearLevel()">CLEAR ALL</button>
+                <button class="tool-btn utility" onclick="testLevel(false)">START</button>
+                <button class="tool-btn utility" style="border: 1px solid #00ff00; color: #00ff00;" onclick="testLevel(true)">PLAY HERE</button>
+                <button class="tool-btn utility" onclick="showDataScreen(true)">EXPORT</button>
+                <button class="tool-btn utility" onclick="exitEditor()">EXIT</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreEl = document.getElementById('score-display');
+        const attemptEl = document.getElementById('attempt-display');
+        const progressContainer = document.getElementById('progress-container');
+        const progressFill = document.getElementById('progress-fill');
+        const progressText = document.getElementById('progress-text');
+        
+        // Screens
+        const startScreen = document.getElementById('start-screen');
+        const levelSelectScreen = document.getElementById('level-select-screen');
+        const pauseScreen = document.getElementById('pause-screen');
+        const dataScreen = document.getElementById('data-screen');
+        const editorUI = document.getElementById('editor-ui');
+        
+        // Data Modal Elements
+        const dataInput = document.getElementById('data-input');
+        const dataMsg = document.getElementById('data-msg');
+        
+        // Buttons
+        const startBtn = document.getElementById('start-btn');
+        const editorBtn = document.getElementById('editor-btn');
+        const importBtn = document.getElementById('import-btn');
+        
+        // Pause Buttons
+        const resumeBtn = document.getElementById('resume-btn');
+        const pauseRestartBtn = document.getElementById('pause-restart-btn');
+        const pauseMenuBtn = document.getElementById('pause-menu-btn');
+        const backEditorBtn = document.getElementById('back-editor-btn');
+        
+        // Data Buttons
+        const copyDataBtn = document.getElementById('copy-data-btn');
+        const loadDataBtn = document.getElementById('load-data-btn');
+        const closeDataBtn = document.getElementById('close-data-btn');
+
+        // Game Constants
+        const GRAVITY = 0.9;
+        const JUMP_FORCE = -15;
+        const GROUND_HEIGHT = 50; 
+        const INITIAL_SPEED = 6;
+        const SPEED_INCREMENT = 0.001; 
+        const MAX_SPEED = 15;
+        const SHIP_GRAVITY = 0.5;
+        const SHIP_THRUST = -0.8;
+
+        // Game State
+        let gameState = 'start'; 
+        let isPaused = false;
+        let frames = 0;
+        let score = 0;
+        let bonusScore = 0;
+        let attempts = 1;
+        let gameSpeed = INITIAL_SPEED;
+        let particles = [];
+        let gameObjects = []; 
+        let animationId;
+        let isHolding = false;
+        let currentTestOffset = 0;
+        let currentLevelName = '';
+        let levelEndX = 0;
+        let distanceTraveled = 0;
+        
+        // Editor State
+        let isCustomLevel = false;
+        let editorScrollX = 0;
+        let editorScrollY = 100;
+        let editorScale = 1.0; 
+        let currentTool = 'block';
+        let levelData = []; 
+        let mouseX = 0;
+        let mouseY = 0;
+        let isPanning = false;
+        let lastPanX = 0;
+        let lastPanY = 0;
+
+        // --- PRE-MADE LEVELS ---
+        const LEVELS = {
+            stereo: generateLevel('stereo'),
+            backontrack: generateLevel('backontrack'),
+            clubstep: generateLevel('clubstep'),
+            bloodbath: generateLevel('bloodbath'),
+            cataclysm: generateLevel('cataclysm')
+        };
+
+        function generateLevel(type) {
+            let data = [];
+            const add = (t, x, y, w, h) => data.push({type: t, x, y, w, h});
+            const floorGridY = canvas.height - GROUND_HEIGHT - 50; // Y = 300
+
+            // Helper to encase portals
+            const addGuardedPortal = (type, x, y) => {
+                if (type === 'portal-ship') add('portal-ship', x, y, 40, 80);
+                else add('portal-cube', x, y, 40, 80);
+                
+                // Add surrounding blocks to force entry
+                // Top wall
+                add('block', x, y - 50, 50, 50);
+                add('block', x, y - 100, 50, 50);
+                add('block', x, y - 150, 50, 50);
+                // Bottom wall (if not on floor)
+                if (y < floorGridY - 50) {
+                    add('block', x, y + 100, 50, 50);
+                }
+            };
+
+            if (type === 'stereo') {
+                for(let i=0; i<10; i++) {
+                    let base = 500 + i * 400;
+                    add('spike', base, floorGridY, 30, 40);
+                    add('spike', base + 50, floorGridY, 30, 40);
+                    add('block', base + 200, floorGridY, 50, 50);
+                    add('spike', base + 210, floorGridY - 50, 30, 40); 
+                }
+                add('block', 4500, floorGridY, 50, 50);
+                add('block', 4550, floorGridY - 50, 50, 50);
+                add('block', 4600, floorGridY - 100, 50, 50);
+                
+                // Surprise Ship Section
+                addGuardedPortal('portal-ship', 4800, floorGridY - 120); // Low portal
+                // Wall you must fly over
+                add('block', 5100, floorGridY, 50, 300); // Tall wall
+                add('coin', 5100, floorGridY - 350, 20, 20); // Coin at peak
+            } 
+            else if (type === 'backontrack') {
+                for(let i=0; i<8; i++) {
+                    let base = 500 + i * 500;
+                    add('jumppad', base, floorGridY, 30, 10);
+                    add('block', base + 150, floorGridY - 100, 50, 50); 
+                    add('spike', base + 150, floorGridY, 30, 40); 
+                }
+                addGuardedPortal('portal-ship', 4500, canvas.height - 250);
+                add('block', 5000, 100, 50, 50);
+                add('block', 5300, 300, 50, 50);
+                addGuardedPortal('portal-cube', 5800, canvas.height - 250);
+            } 
+            else if (type === 'clubstep') {
+                addGuardedPortal('portal-ship', 300, canvas.height - 250);
+                for(let i=0; i<15; i++) {
+                    let base = 600 + i * 300;
+                    if(i % 2 === 0) add('ceilspike', base, 0, 30, 40); 
+                    else add('spike', base, floorGridY, 30, 40);
+                    if (i % 5 === 0) {
+                        add('block', base + 150, 100, 50, 200); 
+                        add('block', base + 150, 350, 50, 200); 
+                    }
+                }
+            } 
+            else if (type === 'bloodbath') {
+                add('spike', 600, floorGridY, 30, 40);
+                add('spike', 630, floorGridY, 30, 40);
+                add('spike', 660, floorGridY, 30, 40);
+                add('spike', 1000, floorGridY, 30, 40);
+                add('spike', 1030, floorGridY, 30, 40);
+                add('spike', 1060, floorGridY, 30, 40);
+
+                for(let i=0; i<5; i++) {
+                    let base = 1500 + i * 300;
+                    add('block', base, floorGridY, 50, 50);
+                    add('spike', base + 80, floorGridY, 30, 40); 
+                }
+
+                addGuardedPortal('portal-ship', 3200, canvas.height - 250);
+                
+                for(let i=0; i<20; i++) {
+                    let base = 3500 + i * 200;
+                    add('block', base, 0, 200, 100);
+                    add('ceilspike', base + 50, 100, 30, 40); 
+                    add('block', base, canvas.height - 150, 200, 150);
+                    add('spike', base + 100, canvas.height - 150 - 50, 30, 40);
+                }
+
+                addGuardedPortal('portal-cube', 7800, canvas.height - 250);
+                add('spike', 8200, floorGridY, 30, 40);
+                add('spike', 8230, floorGridY, 30, 40);
+                add('spike', 8260, floorGridY, 30, 40);
+                add('coin', 8500, floorGridY - 50, 20, 20);
+            }
+            else if (type === 'cataclysm') {
+                // THE FINAL LEVEL - VERY LONG
+                // Section 1: Cube Chaos
+                for(let i=0; i<15; i++) {
+                    let base = 500 + i * 350;
+                    add('spike', base, floorGridY, 30, 40);
+                    add('spike', base+40, floorGridY, 30, 40); // Double spike
+                    add('block', base+180, floorGridY-50, 50, 50); // Mid air
+                    add('spike', base+190, floorGridY, 30, 40); // Trap under
+                }
+                
+                // Section 2: Ship Hell
+                addGuardedPortal('portal-ship', 6000, floorGridY - 150);
+                
+                for(let i=0; i<30; i++) {
+                    let base = 6300 + i * 250;
+                    // Alternating tight columns
+                    let gapY = 100 + Math.sin(i)*150; // Wavy path
+                    if(gapY < 50) gapY = 50;
+                    if(gapY > 300) gapY = 300;
+                    
+                    add('block', base, 0, 50, gapY); // Ceiling pillar
+                    add('block', base, gapY + 120, 50, 400); // Floor pillar (gap 120)
+                }
+                
+                // Section 3: The Ball (Cube with Pads)
+                addGuardedPortal('portal-cube', 14000, floorGridY - 150);
+                
+                for(let i=0; i<20; i++) {
+                    let base = 14300 + i * 400;
+                    add('block', base, floorGridY, 50, 50);
+                    add('jumppad', base, floorGridY-50, 30, 10); // Pad on block
+                    // High platform to land on
+                    add('block', base+250, floorGridY-150, 50, 50);
+                    add('spike', base+250, floorGridY, 30, 40); // Spike below
+                }
+                
+                // Final Straight Fly
+                addGuardedPortal('portal-ship', 22500, floorGridY - 200);
+                for(let i=0; i<20; i++) {
+                    let base = 22800 + i * 200;
+                    add('block', base, 0, 50, 150);
+                    add('ceilspike', base+10, 150, 30, 40);
+                    add('block', base, 300, 50, 100);
+                    add('spike', base+10, 300-40, 30, 40);
+                }
+                
+                add('coin', 27000, 200, 20, 20);
+                // End
+            }
+            return data;
+        }
+
+        // Player Object
+        const player = {
+            x: 100,
+            y: 0,
+            size: 30,
+            dy: 0,
+            grounded: false,
+            color: '#00ffff',
+            rotation: 0,
+            mode: 'cube',
+            
+            reset() {
+                this.y = canvas.height - GROUND_HEIGHT - this.size;
+                this.dy = 0;
+                this.grounded = true;
+                this.rotation = 0;
+                this.mode = 'cube';
+                this.color = '#00ffff';
+            },
+
+            jump(force = JUMP_FORCE, ignoreGround = false) {
+                if (this.mode === 'cube') {
+                    if (this.grounded || ignoreGround) {
+                        this.dy = force;
+                        this.grounded = false;
+                        createDust(this.x + this.size/2, this.y + this.size);
+                    }
+                }
+            },
+
+            update() {
+                if (this.mode === 'cube') {
+                    this.dy += GRAVITY;
+                    this.y += this.dy;
+
+                    if (!this.grounded) {
+                        this.rotation += 0.1; 
+                    } else {
+                        this.rotation = Math.round(this.rotation / (Math.PI/2)) * (Math.PI/2); 
+                    }
+                } else if (this.mode === 'ship') {
+                    if (isHolding) {
+                        this.dy += SHIP_THRUST;
+                    }
+                    this.dy += SHIP_GRAVITY;
+                    if (this.dy > 8) this.dy = 8;
+                    if (this.dy < -8) this.dy = -8;
+                    this.y += this.dy;
+                    this.rotation = this.dy * 0.1;
+                }
+
+                if (this.y + this.size > canvas.height - GROUND_HEIGHT) {
+                    this.y = canvas.height - GROUND_HEIGHT - this.size;
+                    this.dy = 0;
+                    this.grounded = true;
+                    if (this.mode === 'cube') this.rotation = 0;
+                    else this.rotation = 0;
+                } else {
+                    this.grounded = false;
+                }
+                
+                if (this.y < 0) {
+                    this.y = 0;
+                    this.dy = 0;
+                }
+            },
+
+            draw() {
+                ctx.save();
+                ctx.translate(this.x + this.size/2, this.y + this.size/2);
+                ctx.rotate(this.rotation);
+                ctx.fillStyle = this.color;
+                ctx.shadowBlur = 15;
+                ctx.shadowColor = this.color;
+                
+                if (this.mode === 'cube') {
+                    ctx.fillRect(-this.size/2, -this.size/2, this.size, this.size);
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+                    ctx.fillRect(-this.size/2 + 5, -this.size/2 + 5, this.size - 10, this.size/2);
+                    if (gameState === 'start' || gameState === 'levelselect') {
+                        ctx.fillStyle = '#000';
+                        ctx.fillRect(0, -5, 6, 6);
+                        ctx.fillRect(8, -5, 6, 6);
+                    }
+                } else {
+                    ctx.beginPath();
+                    ctx.moveTo(-this.size/2, this.size/2);
+                    ctx.lineTo(this.size/2, 0);
+                    ctx.lineTo(-this.size/2, -this.size/2);
+                    ctx.lineTo(-this.size/4, 0);
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+                    ctx.beginPath();
+                    ctx.moveTo(-this.size/4, this.size/4);
+                    ctx.lineTo(this.size/4, 0);
+                    ctx.lineTo(-this.size/4, -this.size/4);
+                    ctx.fill();
+                }
+                ctx.restore();
+            }
+        };
+
+        // --- CLASSES ---
+        class GameObj {
+            constructor(type, x, y, w, h, color) {
+                this.type = type;
+                this.x = x;
+                this.y = y;
+                this.w = w;
+                this.h = h;
+                this.color = color;
+                this.collected = false;
+            }
+            update() { this.x -= gameSpeed; }
+            draw() {}
+        }
+
+        class Spike extends GameObj {
+            constructor(x) { super('spike', x, canvas.height - GROUND_HEIGHT - 40, 30, 40, '#ff0055'); }
+            draw() {
+                ctx.fillStyle = this.color;
+                ctx.shadowBlur = 10; ctx.shadowColor = this.color;
+                ctx.beginPath();
+                ctx.moveTo(this.x, this.y + this.h);
+                ctx.lineTo(this.x + this.w / 2, this.y);
+                ctx.lineTo(this.x + this.w, this.y + this.h);
+                ctx.fill();
+            }
+        }
+        class CeilingSpike extends GameObj {
+            constructor(x) { super('ceilspike', x, 0, 30, 40, '#ff0055'); }
+            draw() {
+                ctx.fillStyle = this.color;
+                ctx.shadowBlur = 10; ctx.shadowColor = this.color;
+                ctx.beginPath();
+                ctx.moveTo(this.x, this.y);
+                ctx.lineTo(this.x + this.w / 2, this.y + this.h);
+                ctx.lineTo(this.x + this.w, this.y);
+                ctx.fill();
+            }
+        }
+        class Block extends GameObj {
+            constructor(x, y, w, h) { super('block', x, y, w, h, '#00aaff'); }
+            draw() {
+                ctx.fillStyle = this.color;
+                ctx.shadowBlur = 10; ctx.shadowColor = this.color;
+                ctx.fillRect(this.x, this.y, this.w, this.h);
+                ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(this.x, this.y, this.w, this.h);
+            }
+        }
+        class JumpPad extends GameObj {
+            constructor(x) { super('jumppad', x, canvas.height - GROUND_HEIGHT - 10, 30, 10, '#ff00ff'); }
+            draw() {
+                ctx.fillStyle = this.color;
+                ctx.shadowBlur = 10; ctx.shadowColor = this.color;
+                ctx.fillRect(this.x, this.y, this.w, this.h);
+            }
+        }
+        class Coin extends GameObj {
+            constructor(x, y) { 
+                super('coin', x, y, 20, 20, '#ffd700'); 
+                this.bobOffset = Math.random() * Math.PI * 2;
+            }
+            update() {
+                this.x -= gameSpeed;
+                this.y += Math.sin(frames * 0.1 + this.bobOffset) * 0.5;
+            }
+            draw() {
+                if (this.collected) return;
+                ctx.fillStyle = this.color;
+                ctx.shadowBlur = 15; ctx.shadowColor = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x + this.w/2, this.y + this.h/2, this.w/2, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
+            }
+        }
+        class Portal extends GameObj {
+            constructor(x, targetMode) {
+                super('portal', x, canvas.height - GROUND_HEIGHT - 120, 40, 80, targetMode === 'ship' ? '#ffaa00' : '#00ffff');
+                this.targetMode = targetMode;
+            }
+            draw() {
+                ctx.save();
+                ctx.shadowBlur = 20; ctx.shadowColor = this.color;
+                ctx.strokeStyle = this.color; ctx.lineWidth = 4;
+                const scale = 1 + Math.sin(Date.now() * 0.005) * 0.1;
+                ctx.beginPath();
+                ctx.ellipse(this.x + this.w/2, this.y + this.h/2, (this.w/2)*scale, (this.h/2)*scale, 0, 0, Math.PI*2);
+                ctx.stroke();
+                ctx.fillStyle = this.color; ctx.font = '10px sans-serif'; ctx.textAlign = 'center';
+                ctx.fillText(this.targetMode.toUpperCase(), this.x + this.w/2, this.y + this.h/2 + 4);
+                ctx.restore();
+            }
+        }
+
+        class Particle {
+            constructor(x, y, color) {
+                this.x = x; this.y = y;
+                this.size = Math.random() * 5 + 2;
+                this.speedX = Math.random() * 6 - 3;
+                this.speedY = Math.random() * 6 - 3;
+                this.color = color;
+                this.life = 1.0;
+            }
+            update() {
+                this.x += this.speedX; this.y += this.speedY;
+                this.life -= 0.02;
+            }
+            draw() {
+                ctx.globalAlpha = Math.max(0, this.life);
+                ctx.fillStyle = this.color;
+                ctx.fillRect(this.x, this.y, this.size, this.size);
+                ctx.globalAlpha = 1.0;
+            }
+        }
+
+        function createExplosion(x, y, color = player.color) {
+            for (let i = 0; i < 20; i++) particles.push(new Particle(x, y, color));
+        }
+        function createDust(x, y) {
+            for (let i = 0; i < 5; i++) particles.push(new Particle(x, y, '#fff'));
+        }
+
+        // --- CORE GAME LOOP ---
+        function animate() {
+            animationId = requestAnimationFrame(animate);
+            if (isPaused) return;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            if (gameState === 'editor') {
+                drawEditor();
+                return;
+            }
+
+            drawBackground();
+
+            particles.forEach((p, index) => {
+                p.update(); p.draw();
+                if (p.life <= 0) particles.splice(index, 1);
+            });
+
+            if (gameState === 'playing' || gameState === 'test') {
+                frames++;
+                if (!isCustomLevel && gameSpeed < MAX_SPEED) gameSpeed += SPEED_INCREMENT;
+                
+                score = Math.floor(frames / 10) + bonusScore;
+                scoreEl.innerText = `SCORE: ${score}`;
+
+                player.update();
+                
+                if (isCustomLevel) {
+                    distanceTraveled += gameSpeed;
+                    
+                    // Progress Logic
+                    let pct = 0;
+                    if (levelEndX > 0) {
+                        pct = Math.min(100, Math.floor((distanceTraveled / levelEndX) * 100));
+                    }
+                    progressFill.style.width = pct + '%';
+                    progressText.innerText = pct + '%';
+
+                    if (gameObjects.length === 0 && score > 100) {
+                        alert("LEVEL COMPLETE!");
+                        exitToMenu();
+                        return;
+                    }
+                } else {
+                    handleProceduralSpawning();
+                }
+
+                for (let i = gameObjects.length - 1; i >= 0; i--) {
+                    let obj = gameObjects[i];
+                    obj.update();
+                    obj.draw();
+
+                    if (obj.x + obj.w < -100) {
+                        gameObjects.splice(i, 1);
+                        continue;
+                    }
+
+                    if (checkCollision(player, obj)) {
+                        if (obj.type === 'spike' || obj.type === 'ceilspike') {
+                            gameOver();
+                        } else if (obj.type === 'portal') {
+                            player.mode = obj.targetMode;
+                            createExplosion(player.x, player.y);
+                        } else if (obj.type === 'block') {
+                            handleBlockCollision(obj);
+                        } else if (obj.type === 'jumppad') {
+                            player.jump(-18, true); 
+                            createExplosion(player.x, player.y + player.size, '#ff00ff');
+                        } else if (obj.type === 'coin') {
+                            if (!obj.collected) {
+                                obj.collected = true;
+                                bonusScore += 50;
+                                createExplosion(obj.x, obj.y, '#ffd700');
+                                gameObjects.splice(i, 1);
+                            }
+                        }
+                    }
+                }
+            } else if (gameState === 'start' || gameState === 'levelselect') {
+                player.draw();
+            } else if (gameState === 'exploding') {
+                 gameObjects.forEach(obj => obj.draw());
+            }
+
+            if (gameState === 'playing' || gameState === 'test') player.draw();
+        }
+
+        function handleProceduralSpawning() {
+            let spawnRate = Math.floor(Math.random() * 50 + (1500 / (gameSpeed * 2)));
+            if (frames % spawnRate !== 0) return;
+
+            const spawnX = canvas.width + 50;
+            const rand = Math.random();
+
+            if (frames > 500 && Math.random() < 0.05) {
+                const target = player.mode === 'cube' ? 'ship' : 'cube';
+                gameObjects.push(new Portal(spawnX, target));
+                frames += 60; return;
+            }
+
+            if (player.mode === 'cube') {
+                if (rand < 0.2) {
+                    for(let i=0; i<3; i++) gameObjects.push(new Coin(spawnX + i*30, canvas.height - GROUND_HEIGHT - 60));
+                } else if (rand < 0.3) {
+                    gameObjects.push(new JumpPad(spawnX));
+                } else if (rand < 0.7) {
+                    gameObjects.push(new Spike(spawnX));
+                } else {
+                    let h = 40; let w = 80 + Math.random() * 100;
+                    let y = Math.random() > 0.5 ? canvas.height - GROUND_HEIGHT - h : canvas.height - GROUND_HEIGHT - h - 60;
+                    gameObjects.push(new Block(spawnX, y, w, h));
+                    if (Math.random() > 0.5) gameObjects.push(new Coin(spawnX + w/2 - 10, y - 30));
+                }
+            } else {
+                if (rand < 0.3) gameObjects.push(new CeilingSpike(spawnX));
+                else if (rand < 0.5) {
+                    let y = Math.random() * (canvas.height - GROUND_HEIGHT - 100);
+                    gameObjects.push(new Block(spawnX, y, 60, 60));
+                } else gameObjects.push(new Spike(spawnX));
+                if (Math.random() < 0.1) gameObjects.push(new Coin(spawnX, Math.random() * 200));
+            }
+        }
+
+        // --- EDITOR LOGIC ---
+        function initEditor() {
+            gameState = 'editor';
+            startScreen.classList.add('hidden');
+            levelSelectScreen.classList.add('hidden');
+            pauseScreen.classList.add('hidden');
+            dataScreen.classList.add('hidden');
+            editorUI.classList.remove('hidden');
+            progressContainer.classList.add('hidden'); // Hide in editor
+            scoreEl.innerText = 'EDITOR MODE';
+            editorScrollX = 0;
+            editorScrollY = 100; 
+            isPaused = false;
+        }
+
+        // Helper to get visual offset for alignment
+        function getVisualOffset(type) {
+            if (type === 'spike') return 10; 
+            if (type === 'jumppad') return 40; 
+            return 0;
+        }
+
+        function drawEditor() {
+            ctx.fillStyle = '#111';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.save();
+            ctx.translate(canvas.width/2, canvas.height/2);
+            ctx.scale(editorScale, editorScale);
+            ctx.translate(-canvas.width/2, -canvas.height/2);
+            
+            ctx.translate(0, editorScrollY);
+            
+            ctx.fillStyle = '#1a1a1a';
+            ctx.fillRect(0, 0, canvas.width, canvas.height); 
+            ctx.fillStyle = '#222';
+            ctx.fillRect(0, canvas.height - GROUND_HEIGHT, canvas.width, canvas.height); 
+            ctx.strokeStyle = '#00aaff'; 
+            ctx.lineWidth = 2;
+            ctx.beginPath(); 
+            ctx.moveTo(0, canvas.height - GROUND_HEIGHT); 
+            ctx.lineTo(canvas.width, canvas.height - GROUND_HEIGHT); 
+            ctx.stroke();
+
+            ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+            ctx.lineWidth = 1;
+            const gridSize = 50;
+            const offsetX = editorScrollX % gridSize;
+            const offsetY = editorScrollY % gridSize; 
+            
+            for(let x = -offsetX - canvas.width; x < canvas.width * 2; x += gridSize) {
+                ctx.beginPath(); ctx.moveTo(x, -2000); ctx.lineTo(x, 2000); ctx.stroke();
+            }
+            for(let y = -offsetY - 2000; y < 2000; y += gridSize) {
+                let drawY = Math.floor(y/gridSize)*gridSize; 
+                ctx.beginPath(); ctx.moveTo(-2000, drawY); ctx.lineTo(2000, drawY); ctx.stroke();
+            }
+
+            levelData.forEach(data => {
+                let screenX = data.x - editorScrollX;
+                if (screenX > -1000 && screenX < 2000) {
+                    let drawY = data.y + getVisualOffset(data.type);
+                    drawObjectPreview(data.type, screenX, drawY, data.w, data.h, false);
+                }
+            });
+
+            let startLineX = 100 - editorScrollX;
+            ctx.strokeStyle = '#0f0'; ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.moveTo(startLineX, -2000); ctx.lineTo(startLineX, 2000); ctx.stroke();
+            ctx.fillStyle = '#0f0'; ctx.fillText("START", startLineX + 5, 20);
+
+            let worldMouseY = (mouseY - canvas.height/2) / editorScale + canvas.height/2 - editorScrollY;
+            let worldMouseX = (mouseX - canvas.width/2) / editorScale + canvas.width/2;
+            
+            let snapSize = 50;
+            if (currentTool === 'spike' || currentTool === 'coin' || currentTool === 'jumppad') snapSize = 25;
+            
+            let snapX = Math.floor((worldMouseX + editorScrollX) / snapSize) * snapSize;
+            let snapY = Math.floor(worldMouseY / snapSize) * snapSize;
+            
+            if (mouseY < canvas.height - 20 && currentTool !== 'pan') { 
+                 let w=30, h=40;
+                 if (currentTool === 'block') { w=50; h=50; }
+                 if (currentTool === 'jumppad') { w=30; h=10; } 
+                 if (currentTool === 'spike') { h=40; } 
+                 if (currentTool === 'ceilspike') { h=40; } 
+                 if (currentTool === 'portal-ship' || currentTool === 'portal-cube') { w=40; h=80; }
+                 if (currentTool === 'coin') { w=20; h=20; }
+
+                 let previewX = snapX - editorScrollX;
+                 let previewY = snapY + getVisualOffset(currentTool);
+                 
+                 if (currentTool === 'eraser') {
+                     let hoverObj = levelData.find(obj => {
+                         let visY = obj.y + getVisualOffset(obj.type);
+                         return (worldMouseX >= obj.x && worldMouseX <= obj.x + obj.w &&
+                                 worldMouseY >= visY && worldMouseY <= visY + obj.h);
+                     });
+                     
+                     if (hoverObj) {
+                         let hX = hoverObj.x - editorScrollX;
+                         let hY = hoverObj.y + getVisualOffset(hoverObj.type);
+                         ctx.strokeStyle = '#ff0000';
+                         ctx.lineWidth = 3;
+                         ctx.strokeRect(hX - 2, hY - 2, hoverObj.w + 4, hoverObj.h + 4);
+                     }
+                 } else {
+                     ctx.globalAlpha = 0.5;
+                     drawObjectPreview(currentTool, previewX, previewY, w, h, true);
+                     ctx.globalAlpha = 1.0;
+                 }
+            }
+            
+            ctx.restore(); 
+
+            ctx.fillStyle = 'white';
+            ctx.font = '10px monospace';
+            ctx.fillText(`X: ${Math.floor((mouseX - canvas.width/2)/editorScale + canvas.width/2 + editorScrollX)}`, 10, 20);
+            
+            if (currentTool === 'pan' || isPanning) {
+                 ctx.strokeStyle = '#00aaff';
+                 ctx.lineWidth = 2;
+                 ctx.beginPath();
+                 ctx.arc(mouseX, mouseY, 15, 0, Math.PI * 2);
+                 ctx.stroke();
+            }
+        }
+
+        function drawObjectPreview(type, x, y, w, h, isPreview) {
+            if (type === 'block') { ctx.fillStyle='#00aaff'; ctx.fillRect(x,y,w,h); }
+            else if (type === 'spike') { ctx.fillStyle='#ff0055'; ctx.beginPath(); ctx.moveTo(x,y+40); ctx.lineTo(x+15,y); ctx.lineTo(x+30,y+40); ctx.fill(); }
+            else if (type === 'ceilspike') { ctx.fillStyle='#ff0055'; ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x+15,y+40); ctx.lineTo(x+30,y); ctx.fill(); }
+            else if (type === 'coin') { ctx.fillStyle='#ffd700'; ctx.beginPath(); ctx.arc(x+10,y+10,10,0,Math.PI*2); ctx.fill(); }
+            else if (type === 'jumppad') { ctx.fillStyle='#ff00ff'; ctx.fillRect(x,y,30,10); }
+            else if (type.startsWith('portal')) { ctx.strokeStyle=type.includes('ship')?'#ffaa00':'#00ffff'; ctx.lineWidth=2; ctx.strokeRect(x,y,40,80); }
+        }
+
+        function editorClick() {
+            if (currentTool === 'pan') return;
+
+            let worldMouseY = (mouseY - canvas.height/2) / editorScale + canvas.height/2 - editorScrollY;
+            let worldMouseX = (mouseX - canvas.width/2) / editorScale + canvas.width/2;
+
+            if (currentTool === 'eraser') {
+                levelData = levelData.filter(obj => {
+                    let visY = obj.y + getVisualOffset(obj.type);
+                    return !(
+                        worldMouseX >= obj.x && 
+                        worldMouseX <= obj.x + obj.w &&
+                        worldMouseY >= visY && 
+                        worldMouseY <= visY + obj.h
+                    );
+                });
+                return;
+            }
+
+            let snapSize = 50;
+            if (currentTool === 'spike' || currentTool === 'coin' || currentTool === 'jumppad') snapSize = 25;
+
+            let worldX = Math.floor((worldMouseX + editorScrollX) / snapSize) * snapSize;
+            let worldY = Math.floor(worldMouseY / snapSize) * snapSize;
+
+            let w=30, h=40;
+            if (currentTool === 'block') { w=50; h=50; }
+            if (currentTool === 'jumppad') { w=30; h=10; }
+            if (currentTool === 'coin') { w=20; h=20; }
+            if (currentTool.startsWith('portal')) { w=40; h=80; }
+            if (currentTool === 'spike' || currentTool === 'ceilspike') { w=30; h=40; }
+
+            levelData = levelData.filter(obj => {
+                const overlap = (worldX < obj.x + obj.w && worldX + w > obj.x &&
+                                 worldY < obj.y + obj.h && worldY + h > obj.y);
+                return !overlap;
+            });
+
+            let obj = { type: currentTool, x: worldX, y: worldY, w: 30, h: 40 };
+            if (currentTool === 'block') { obj.w = 50; obj.h = 50; }
+            if (currentTool === 'jumppad') { obj.w = 30; obj.h = 10; }
+            if (currentTool === 'portal-ship') { obj.w=40; obj.h=80; }
+            if (currentTool === 'portal-cube') { obj.w=40; obj.h=80; }
+            if (currentTool === 'coin') { obj.w=20; obj.h=20; }
+            if (currentTool === 'spike' || currentTool === 'ceilspike') { obj.w=30; obj.h=40; }
+            
+            levelData.push(obj);
+        }
+
+        function moveEditor(dX, dY) {
+            editorScrollX += dX;
+            editorScrollY += dY;
+            if (editorScrollX < 0) editorScrollX = 0;
+        }
+
+        function exitEditor() {
+            gameState = 'start';
+            startScreen.classList.remove('hidden');
+            editorUI.classList.add('hidden');
+            scoreEl.innerText = 'SCORE: 0';
+        }
+        
+        function clearLevel() {
+            if(confirm("Clear current level?")) {
+                levelData = [];
+            }
+        }
+
+        function testLevel(fromCurrentPos) {
+            if (levelData.length === 0) {
+                alert("Place some objects first!");
+                return;
+            }
+            if (fromCurrentPos) {
+                currentTestOffset = editorScrollX;
+            } else {
+                currentTestOffset = 0;
+            }
+            startCustomGame();
+        }
+
+        // --- DATA / EXPORT / IMPORT ---
+        function showDataScreen(isExport) {
+            dataScreen.classList.remove('hidden');
+            if (isExport) {
+                dataInput.value = JSON.stringify(levelData);
+                dataMsg.innerText = "Level data ready to copy.";
+                dataInput.select();
+            } else {
+                dataInput.value = "";
+                dataMsg.innerText = "Paste level code below and click LOAD.";
+            }
+        }
+
+        function closeDataScreen() {
+            dataScreen.classList.add('hidden');
+        }
+
+        function copyDataToClipboard() {
+             dataInput.select();
+             document.execCommand('copy');
+             dataMsg.innerText = "Copied to clipboard!";
+        }
+
+        function loadDataFromInput() {
+            const dataStr = dataInput.value;
+            if (dataStr) {
+                try {
+                    levelData = JSON.parse(dataStr);
+                    closeDataScreen();
+                    
+                    if (gameState === 'start') {
+                        isCustomLevel = true;
+                        startCustomGame();
+                    } else {
+                        // In editor, just load data
+                        alert("Level loaded into editor!");
+                    }
+                } catch(e) {
+                    dataMsg.innerText = "Invalid level code!";
+                }
+            }
+        }
+
+        // --- UI NAVIGATION ---
+        function showLevelSelect() {
+            startScreen.classList.add('hidden');
+            levelSelectScreen.classList.remove('hidden');
+            gameState = 'levelselect';
+        }
+
+        function backToMenu() {
+            levelSelectScreen.classList.add('hidden');
+            startScreen.classList.remove('hidden');
+            gameState = 'start';
+        }
+
+        function startMainLevel(name) {
+            currentLevelName = name;
+            levelData = LEVELS[name]; // Load data
+            isCustomLevel = true;
+            attempts = 1;
+            startCustomGame();
+        }
+
+        // --- PAUSE LOGIC ---
+        function togglePause() {
+            if (gameState !== 'playing' && gameState !== 'test') return;
+            isPaused = !isPaused;
+            if (isPaused) {
+                pauseScreen.classList.remove('hidden');
+                backEditorBtn.classList.toggle('hidden', gameState !== 'test');
+            } else {
+                pauseScreen.classList.add('hidden');
+            }
+        }
+
+        function resumeGame() {
+            isPaused = false;
+            pauseScreen.classList.add('hidden');
+        }
+
+        function backToEditor() {
+            isPaused = false;
+            pauseScreen.classList.add('hidden');
+            dataScreen.classList.add('hidden');
+            initEditor();
+        }
+        
+        function exitToMenu() {
+            isPaused = false;
+            pauseScreen.classList.add('hidden');
+            dataScreen.classList.add('hidden');
+            levelSelectScreen.classList.add('hidden');
+            startScreen.classList.remove('hidden');
+            gameState = 'start';
+            player.reset();
+        }
+
+        // --- GAME HELPERS ---
+        function checkCollision(p, obj) {
+            if (obj.collected) return false;
+            
+            const padX = 6;
+            const padY = 0; 
+
+            return (p.x + p.size - padX > obj.x + padX && 
+                    p.x + padX < obj.x + obj.w - padX &&
+                    p.y + p.size - padY > obj.y + padY && 
+                    p.y + padY < obj.y + obj.h - padY);
+        }
+
+        function handleBlockCollision(block) {
+            const tolerance = 15; 
+            const prevBottom = (player.y - player.dy) + player.size;
+            
+            if (player.dy >= 0 && prevBottom <= block.y + tolerance) {
+                player.grounded = true; 
+                player.dy = 0; 
+                player.y = block.y - player.size;
+                if (player.mode === 'cube') player.rotation = 0;
+            } else {
+                gameOver();
+            }
+        }
+
+        function drawBackground() {
+            // Colors for levels
+            let c1 = '#1a1a1a';
+            let c2 = '#2a2a2a';
+            
+            if (currentLevelName === 'stereo') { c1 = '#001133'; c2 = '#002255'; }
+            if (currentLevelName === 'backontrack') { c1 = '#220022'; c2 = '#440044'; }
+            if (currentLevelName === 'clubstep') { c1 = '#220000'; c2 = '#330000'; }
+            if (currentLevelName === 'bloodbath') { c1 = '#1a0000'; c2 = '#4d0000'; }
+            if (currentLevelName === 'cataclysm') { c1 = '#110022'; c2 = '#220044'; } // Dark Purple
+
+            let gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            gradient.addColorStop(0, c1);
+            gradient.addColorStop(1, c2);
+            ctx.fillStyle = gradient; ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Floor color adjustment for bloodbath
+            if (currentLevelName === 'bloodbath' || currentLevelName === 'cataclysm') {
+                ctx.strokeStyle = '#ff0000';
+            } else {
+                ctx.strokeStyle = '#fff';
+            }
+            
+            ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.moveTo(0, canvas.height - GROUND_HEIGHT); ctx.lineTo(canvas.width, canvas.height - GROUND_HEIGHT); ctx.stroke();
+            
+            const scrollVal = (gameState === 'playing' || gameState === 'test' ? frames * gameSpeed : editorScrollX);
+            const floorOffset = -(scrollVal) % 50;
+            
+            // Grid lines color
+            if (currentLevelName === 'bloodbath' || currentLevelName === 'cataclysm') ctx.strokeStyle = '#550000';
+            else ctx.strokeStyle = '#555';
+            
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            for(let i = floorOffset; i < canvas.width; i += 50) {
+                ctx.moveTo(i, canvas.height - GROUND_HEIGHT); ctx.lineTo(i - 20, canvas.height);
+            }
+            ctx.stroke();
+        }
+
+        function startGame() {
+            isCustomLevel = false;
+            attempts = 1;
+            currentLevelName = '';
+            progressContainer.classList.add('hidden'); // Hide for endless
+            startCommon();
+        }
+
+        function startCustomGame() {
+            gameState = 'test';
+            isCustomLevel = true;
+            
+            player.reset();
+            isHolding = false;
+            isPaused = false;
+            score = 0;
+            frames = 0;
+            gameObjects = [];
+            particles = [];
+            
+            // Calculate Level Length for Progress
+            levelEndX = 0;
+            distanceTraveled = currentTestOffset;
+            levelData.forEach(d => {
+                if (d.x > levelEndX) levelEndX = d.x;
+            });
+            progressContainer.classList.remove('hidden'); // Show for levels
+            
+            let startMode = 'cube';
+            let relevantPortals = levelData.filter(d => d.type.startsWith('portal') && d.x < currentTestOffset);
+            if (relevantPortals.length > 0) {
+                 relevantPortals.sort((a,b) => b.x - a.x);
+                 let lastPortal = relevantPortals[0];
+                 startMode = lastPortal.type.split('-')[1];
+            }
+            player.mode = startMode;
+            
+            if (startMode === 'ship') {
+                player.y = canvas.height / 2;
+                player.dy = 0;
+            } else {
+                 player.y = canvas.height - GROUND_HEIGHT - player.size;
+                 player.dy = 0;
+                 player.grounded = true;
+            }
+
+            startScreen.classList.add('hidden');
+            levelSelectScreen.classList.add('hidden');
+            pauseScreen.classList.add('hidden');
+            dataScreen.classList.add('hidden');
+            editorUI.classList.add('hidden');
+            scoreEl.innerText = 'SCORE: 0';
+            attemptEl.innerText = 'ATTEMPT ' + attempts;
+
+            gameObjects = levelData.filter(d => d.x >= currentTestOffset - 200).map(d => {
+                let instance;
+                let startX = d.x + 100 - currentTestOffset; 
+                
+                if (d.type === 'spike') instance = new Spike(startX);
+                else if (d.type === 'ceilspike') instance = new CeilingSpike(startX);
+                else if (d.type === 'block') instance = new Block(startX, d.y, d.w, d.h);
+                else if (d.type === 'coin') instance = new Coin(startX, d.y);
+                else if (d.type === 'jumppad') instance = new JumpPad(startX);
+                else if (d.type.startsWith('portal')) instance = new Portal(startX, d.type.split('-')[1]);
+                
+                if (instance) {
+                    if (d.type === 'block') { instance.w = d.w; instance.h = d.h; }
+                    instance.y = d.y + getVisualOffset(d.type);
+                    instance.x = startX;
+                }
+                return instance;
+            }).filter(x => x);
+            
+            gameObjects.sort((a,b) => a.x - b.x);
+        }
+
+        function startCommon() {
+            gameState = isCustomLevel ? 'test' : 'playing';
+            score = 0; bonusScore = 0; frames = 0;
+            gameSpeed = INITIAL_SPEED;
+            gameObjects = []; particles = [];
+            player.reset(); isHolding = false; isPaused = false;
+            currentTestOffset = 0;
+            
+            startScreen.classList.add('hidden');
+            levelSelectScreen.classList.add('hidden');
+            pauseScreen.classList.add('hidden');
+            dataScreen.classList.add('hidden');
+            editorUI.classList.add('hidden');
+            
+            scoreEl.innerText = 'SCORE: 0';
+            attemptEl.innerText = 'ATTEMPT ' + attempts;
+        }
+
+        function gameOver() {
+            gameState = 'exploding';
+            createExplosion(player.x + player.size/2, player.y + player.size/2);
+            attempts++;
+            setTimeout(() => {
+                if (isCustomLevel) {
+                    startCustomGame();
+                } else {
+                    startGame(); 
+                }
+            }, 800);
+        }
+
+        // --- INPUT ---
+        function onInputDown(e) {
+            if (e.target !== canvas && e.type !== 'keydown') return; 
+
+            if (e.type === 'keydown' && (e.code === 'Space' || e.code === 'ArrowUp')) e.preventDefault();
+            
+            if (gameState === 'editor') {
+                 if (currentTool === 'pan' || e.button === 1 || (e.type !== 'keydown' && e.shiftKey)) {
+                     isPanning = true;
+                     lastPanX = mouseX;
+                     lastPanY = mouseY;
+                     canvas.style.cursor = 'grabbing';
+                     return; 
+                 }
+                 if (e.type !== 'keydown') {
+                     isHolding = true; 
+                     editorClick();
+                 }
+                 return;
+            }
+
+            if (isPaused) return;
+
+            isHolding = true;
+            if (gameState === 'playing' || gameState === 'test') {
+                if (player.mode === 'cube') player.jump();
+            }
+        }
+        function onInputUp() { 
+            isHolding = false;
+            isPanning = false;
+            canvas.style.cursor = 'crosshair';
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if (gameState === 'editor') {
+                if (e.code === 'ArrowRight') moveEditor(20, 0);
+                if (e.code === 'ArrowLeft') moveEditor(-20, 0);
+                if (e.code === 'ArrowUp') moveEditor(0, 20);
+                if (e.code === 'ArrowDown') moveEditor(0, -20);
+                if (e.code === 'Escape') exitEditor(); 
+            } else if (gameState === 'playing' || gameState === 'test') {
+                if (e.code === 'Escape' || e.code === 'KeyP') togglePause();
+            }
+            if (e.code === 'Space' || e.code === 'ArrowUp') onInputDown(e);
+        });
+        window.addEventListener('keyup', (e) => { 
+             if (e.code === 'Space' || e.code === 'ArrowUp' || e.key === 'Shift') onInputUp(); 
+        });
+        
+        canvas.addEventListener('mousedown', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            mouseX = (e.clientX - rect.left) * (canvas.width / rect.width);
+            mouseY = (e.clientY - rect.top) * (canvas.height / rect.height);
+            onInputDown(e);
+        });
+        
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            mouseX = (e.clientX - rect.left) * (canvas.width / rect.width);
+            mouseY = (e.clientY - rect.top) * (canvas.height / rect.height);
+            
+            if (gameState === 'editor') {
+                if (isPanning) {
+                    const dx = mouseX - lastPanX;
+                    const dy = mouseY - lastPanY;
+                    moveEditor(-dx, -dy);
+                    lastPanX = mouseX;
+                    lastPanY = mouseY;
+                } else if (isHolding) {
+                    editorClick();
+                }
+            }
+        });
+        canvas.addEventListener('mouseup', onInputUp);
+        
+        canvas.addEventListener('wheel', (e) => {
+            if (gameState === 'editor') {
+                e.preventDefault();
+                if (e.ctrlKey) {
+                    let zoomSpeed = 0.001;
+                    editorScale -= e.deltaY * zoomSpeed;
+                    if (editorScale < 0.1) editorScale = 0.1;
+                    if (editorScale > 5.0) editorScale = 5.0;
+                } else {
+                    moveEditor(e.deltaX, e.deltaY);
+                }
+            }
+        }, { passive: false });
+        
+        canvas.addEventListener('touchstart', (e) => { 
+            if (e.target !== canvas) return;
+            e.preventDefault(); 
+            const touch = e.touches[0];
+            const rect = canvas.getBoundingClientRect();
+            mouseX = (touch.clientX - rect.left) * (canvas.width / rect.width);
+            mouseY = (touch.clientY - rect.top) * (canvas.height / rect.height);
+            onInputDown({target: canvas, type: 'touchstart'}); 
+        }, {passive:false});
+        
+        canvas.addEventListener('touchend', (e) => { e.preventDefault(); onInputUp(); });
+        
+        canvas.addEventListener('touchmove', (e) => {
+             e.preventDefault(); 
+             const touch = e.touches[0];
+             const rect = canvas.getBoundingClientRect();
+             mouseX = (touch.clientX - rect.left) * (canvas.width / rect.width);
+             mouseY = (touch.clientY - rect.top) * (canvas.height / rect.height);
+             
+             if (gameState === 'editor') {
+                 if (isPanning) {
+                     const dx = mouseX - lastPanX;
+                     const dy = mouseY - lastPanY;
+                     moveEditor(-dx, -dy);
+                     lastPanX = mouseX;
+                     lastPanY = mouseY;
+                 } else if (isHolding) {
+                     editorClick();
+                 }
+             }
+        }, {passive:false});
+
+        // UI Events
+        // Modified Start Button Logic
+        startBtn.onclick = showLevelSelect;
+        
+        editorBtn.onclick = initEditor;
+        importBtn.onclick = () => showDataScreen(false);
+        
+        resumeBtn.onclick = resumeGame;
+        pauseRestartBtn.onclick = () => {
+            resumeGame();
+            attempts++;
+            if(isCustomLevel) startCustomGame();
+            else startGame();
+        }
+        pauseMenuBtn.onclick = exitToMenu;
+        backEditorBtn.onclick = backToEditor;
+        
+        // Data Events
+        copyDataBtn.onclick = copyDataToClipboard;
+        loadDataBtn.onclick = loadDataFromInput;
+        closeDataBtn.onclick = closeDataScreen;
+
+        document.querySelectorAll('.tool-btn').forEach(btn => {
+            if (btn.dataset.tool) {
+                btn.onclick = () => {
+                    document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    currentTool = btn.dataset.tool;
+                }
+            }
+        });
+
+        player.reset();
+        animate();
+    </script>
+</body>
+</html>
